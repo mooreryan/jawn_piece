@@ -26,7 +26,7 @@ opts = Trollop.options do
   opt(:database, "MSA database",
       type: :string,
       default: "test_files/database.fa")
-  opt(:database_otu_info,
+  opt(:db_otu_info,
       "Accession to OTU info for the database",
       type: :string,
       default: "test_files/otus.txt")
@@ -44,7 +44,7 @@ masked_seqs = File.join opts[:outdir], "masked_alignment.fa"
 degapped_seqs = File.join opts[:outdir], "degapped_alignment.fa"
 masked_for_phylip = File.join opts[:outdir], "masked_for_phylip.fa"
 for_phylip_map = File.join opts[:outdir], "for_phylip_map.txt"
-phylip_infile = File.join opts[:outdir], "phylip_infile.txt"
+phylip_infile = File.join opts[:outdir], "DNAdist_params.txt"
 this_dir = File.dirname(__FILE__)
 phylip_outfile = File.join this_dir, "outfile"
 masked_dist = File.join opts[:outdir], "masked_aln.dist"
@@ -57,74 +57,83 @@ final_otus = File.join opts[:outdir], "final_otu_calls.txt"
 Ryan.try_mkdir dotur_outdir
 
 SILVA_ALN_LEN = 50000
+OTU_LEVEL = 0.03
+
 
 mask = ""
 mask_posns = []
 n = 0
 database = {}
-gaps = []
-database_otu_info = {}
+gap_posns = []
+db_otu_info = {}
 head_map = {} # used to prevent names from being too long for phylip
 otu_calls_info = {}
 user_provided_headers = Set.new
 which_cutoff = -1
-which_this_otu_group = {}
+which_dotur_otu_group = {}
 otu_group_actual_otus = {}
 
 
-Ryan.time_it("0 Get database OTU info") do
+Ryan.time_it("0 Get database OTU metadata info") do
   lineno = 0
-  File.open(opts[:database_otu_info]).each_line do |line|
+  File.open(opts[:db_otu_info]).each_line do |line|
     unless lineno.zero?
       acc, otu, clone, num = line.chomp.split "\t"
 
-      if database_otu_info.has_key? acc
-        abort "ERROR: #{acc} is repeated in #{opts[:database_otu_info]}"
+      if db_otu_info.has_key? acc
+        abort "ERROR: #{acc} is repeated in #{opts[:db_otu_info]}"
       end
 
-      database_otu_info[acc] = { otu: otu, clone: clone, num: num.to_i }
+      db_otu_info[acc] = { otu: otu, clone: clone, num: num.to_i }
     end
 
     lineno += 1
   end
 end
 
-Ryan.time_it("1") do
+Ryan.time_it("1 Read the database for gaps and mask") do
   FastaFile.open(opts[:database]).each_record do |head, seq|
+    # ensure each sequence in the database is the proper length
     unless seq.length == SILVA_ALN_LEN
       abort "ERROR: #{head} in #{opts[:database]} is #{seq.length} bases, should be #{SILVA_ALN_LEN}"
     end
 
-    if n.zero?
+    if n.zero? # in the mask
       mask = seq
 
+      # read in the positions to keep into mask_posns array
       mask.each_char.with_index do |c, i|
         mask_posns << i if c == '*'
       end
     else
-      unless database_otu_info.has_key? head
-        abort "ERROR: #{head} in #{opts[:database]} is not present in #{opts[:database_otu_info]}"
+      # ensure the sequence has OTU info in the metadata file
+      unless db_otu_info.has_key? head
+        abort "ERROR: #{head} in #{opts[:database]} is not present in #{opts[:db_otu_info]}"
       end
 
+      # ensure sequence headers are unique in the database
       if database.has_key? head
         abort "ERROR: #{head} is duplicated in #{opts[:database]}"
       end
 
       database[head] = seq.gsub(/U/, "T").gsub(/u/, "t")
 
+      # note position of gaps
       these_gap_posns = Set.new
       seq.each_char.with_index do |c, i|
         these_gap_posns << i if c == '-'
       end
 
-      gaps << these_gap_posns
+      # gaps array contians a Set for each sequence containing the
+      # posn of all gaps for that sequence
+      gap_posns << these_gap_posns
     end
 
     n += 1
   end
 end
 
-Ryan.time_it("2") do
+Ryan.time_it("2 Update gap posns from user seqs & trim mask") do
   # first run through the sequences to adjust the mask
   FastaFile.open(opts[:alignment]).each_record do |head, seq|
     unless seq.length == SILVA_ALN_LEN
@@ -142,7 +151,7 @@ Ryan.time_it("2") do
       these_gap_posns << i if c == '-'
     end
 
-    gaps << these_gap_posns
+    gap_posns << these_gap_posns
 
     first_seq_posn = seq.index /[^-]/
     last_seq_posn = seq.length - seq.reverse.index(/[^-]/) - 1
@@ -159,7 +168,7 @@ Ryan.time_it("2") do
   end
 end
 
-Ryan.time_it("3") do
+Ryan.time_it("3 Apply mask to seqs & write") do
   # apply the mask, figure out gaps
   File.open(masked_seqs, "w") do |f|
     FastaFile.open(opts[:alignment]).each_record do |head, seq|
@@ -174,8 +183,11 @@ Ryan.time_it("3") do
       f.printf ">%s\n%s\n", head, masked_seq
     end
   end
+end
 
-  gap_posns = gaps.reduce(:&)
+Ryan.time_it("3.5 Write degapped alignment") do
+
+  shared_gap_posns = gap_posns.reduce(:&)
 
   File.open(degapped_seqs, "w") do |f|
     FastaFile.open(opts[:alignment]).each_record do |head, seq|
@@ -184,7 +196,7 @@ Ryan.time_it("3") do
       f.printf ">%s\n", head
 
       seq.each_char.with_index do |c, i|
-        f.print c unless gap_posns.include? i
+        f.print c unless shared_gap_posns.include? i
       end
       f.print "\n"
     end
@@ -193,15 +205,14 @@ Ryan.time_it("3") do
       f.printf ">%s\n", head
 
       seq.each_char.with_index do |c, i|
-        f.print c unless gap_posns.include? i
+        f.print c unless shared_gap_posns.include? i
       end
       f.print "\n"
     end
   end
 end
 
-Ryan.time_it("4") do
-  # make sure aln_len and num_seqs are correct
+Ryan.time_it("4 Make masked_for_phylip.fa") do
 
   aln_len = nil
   num_seqs = 0
@@ -209,6 +220,8 @@ Ryan.time_it("4") do
 
     num_seqs += 1
 
+    # all alignments must have same length
+    # TODO move this to step 3
     if aln_len && seq.length != aln_len
       abort("Error: alignments in #{masked_seqs} are not the same length")
     end
@@ -276,9 +289,9 @@ Ryan.time_it("8 Read DOTUR OTU calls") do
   end
 end
 
-Ryan.time_it("9") do
-  # which cutoff to use? get closest to 0.03 without going over
-  OTU_LEVEL = 0.03
+
+Ryan.time_it("9 Pick cutoff closest to #{OTU_LEVEL}") do
+  # which cutoff to use? get closest to OTU_LEVEL without going over
   otu_calls_info.each do |cutoff, otu_group|
     # TODO optimize this with a break
 
@@ -286,28 +299,45 @@ Ryan.time_it("9") do
       which_cutoff = cutoff
     end
   end
+
+  # ensure cutoff actually was set
+  assert which_cutoff != -1
 end
 
-Ryan.time_it("10") do
+
+Ryan.time_it("10 Assign OTU numbers to OTU groups from the " +
+             "#{opts[:db_otu_info]}") do
   assert otu_calls_info[which_cutoff]
 
+  # otu_group is an array of headers contained in that OTU
+  #
+  # the idx is the number of that OTU from DOTUR, could be different
+  # each run
   otu_calls_info[which_cutoff].each_with_index do |otu_group, idx|
     otu_group_actual_otus[idx] = []
 
     otu_group.each do |header|
-      if which_this_otu_group.has_key? header
+      if which_dotur_otu_group.has_key? header
         abort "ERROR: #{header} repeated in the OTU groups"
       else
-        which_this_otu_group[header] = idx
-        if database_otu_info[header] # ie the sequence is in the database
-          otu_group_actual_otus[idx] << database_otu_info[header][:otu]
+        which_dotur_otu_group[header] = idx
+        # if the sequence is in the database
+        if db_otu_info[header]
+          otu_group_actual_otus[idx] << db_otu_info[header][:otu]
         end
       end
     end
   end
 end
 
-Ryan.time_it("11") do
+# otu_group_actual_otus maps the new DOTUR numbers to an array of
+# acutal OTU numbers. Things go in this array only if the sequence has
+# a "true" OTU call from the database. It could happen that one of the
+# DOTUR OTUs contains sequences from mulitplie true db OTUs, if this
+# happens, we can give a confidence to it using otu_group_actual_otus
+
+Ryan.time_it("11 Calculate OTU assignment confidences") do
+  # TODO what will happen with sequences that have no match in the DB
   otu_group_actual_otus = otu_group_actual_otus.map { |otu, group|
     total = group.count
     [otu,
@@ -320,10 +350,11 @@ Ryan.time_it("12 Final OTU calls written to #{final_otus}") do
   File.open(final_otus, "w") do |f|
     f.puts %w[header otu confidence].join "\t"
     user_provided_headers.each do |header|
-      assert which_this_otu_group[header]
-      assert otu_group_actual_otus[which_this_otu_group[header]]
+      assert which_dotur_otu_group[header]
+      assert otu_group_actual_otus[which_dotur_otu_group[header]]
 
-      this_header_info = otu_group_actual_otus[which_this_otu_group[header]]
+      this_header_info =
+        otu_group_actual_otus[which_dotur_otu_group[header]]
 
       this_header_info.last.each do |otu, percent|
         f.puts [header, otu, percent].join "\t"
