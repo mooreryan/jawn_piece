@@ -1,0 +1,85 @@
+acc	otu	clone	num
+FJ001796	1	Loh OTU2 clone 60	11
+JF320714	1	Poh OTU1 clone 9	8
+JF320715	1	Poh OTU1 clone 67	8
+JF320716	1	Poh OTU1 clone 74	8
+JF320731	1	Poh OTU15 clone 52	1
+JF320770	1	ULoh OTU20 clone 55	2
+JF320772	1	ULoh OTU39 clone 94	1
+JF320787	1	UNH OTU16 clone 122	2
+FJ905756	1	V1F clone 151b	6
+FJ905617	1	AV19F clone 4b	17
+FJ205309	1	ELSC clone 13	1
+FJ535254	1	Kermadec Arc clone TF-31	1
+EU574657	1	1-WB OTU4 clone 29	1
+U15116	2	PVB OTU4 clone 13	1
+JF320735	2	UHO OTU2 clone 21	4
+JF320751	2	SPL OTU7 clone 22	3
+FJ001795	2	Loh OTU1 clone 67	12
+JF320717	2	Poh OTU2 clone 12	7
+JF320718	2	Poh OTU2 clone 27	7
+JF320719	2	Poh OTU2 clone 89	7
+JF320764	2	ULoh OTU8 clone 191	8
+JF320785	2	UNH OTU13 clone 95	2
+DQ832638	2	Cleft Mound pushcore clone CMB-2	2
+FJ497570	2	Vailulu'u Seamount clone VS_CL-318	1
+JF320732	3	Poh OTU16 clone 64	1
+DQ832637	3	Cleft Mound pushcore clone CMB-25	3
+FJ905642	3	AV19F clone 45b	5
+FJ905692	3	V1F clone 2b	27
+JF320723	4	Poh OTU6 clone 78	3
+JF320724	4	Poh OTU7 clone 34	3
+JF320729	4	Poh OTU13 clone 3	1
+JF320730	4	Poh OTU14 clone 5	1
+FJ905745	4	V1F clone 118b	1
+FJ905694	4	V1F clone 7b	1
+FJ905704	4	V1F clone 25b	9
+FJ205310	4	ELSC clone 16	15
+FJ905712	5	V1F clone 48b	12
+JF320746	6	SPL OTU2 clone 25	6
+FJ001799	6	Loh OTU5 clone 26	3
+JF320713	6	Loh OTU5 clone 49	2
+JF320745	7	SPL OTU1 clone 10	8
+EU574670	8	2-WB OTU10 clone 8	5
+FJ905632	8	AV19F clone 30b	2
+FJ205311	8	ELSC clone 40	1
+HQ206658	9	Environmental enrichment JMM_S4-B-H2a	1
+DQ832644	9	Cleft Mound pushcore clone CMB-6	3
+AB284832	9	Papm3 clone BL26	1
+AB284833	9	Papm3 clone BL54	1
+FJ497362	9	Vailulu'u Seamount clone VS_CL-111	1
+FJ497659	9	Vailulu'u Seamount clone VS_CL-407	1
+JF320727	10	Poh OTU10 clone 1	2
+JF320728	10	Poh OTU11 clone 68	2
+JF320771	10	ULoh OTU22 clone 69	2
+JF320784	10	UNH OTU12 clone 27	2
+EF493244	11	Mariprofundus ferrooxydans strain JV-1	1
+EF493243	11	Mariprofundus ferrooxydans strain PV-1	1
+JF317957	11	Mariprofundus sp. strain M34	1
+FJ001801	11	Loh OTU7 clone 5	2
+GU291335	11	SFB salt marsh sediment clone WSMO200	2
+JF261517	12	UNB OTU6 clone 31	3
+JF261519	12	UNB OTU8 clone 7	2
+FJ905724	13	V1F clone 74b	5
+AJ309526	14	Red Sea bacterium KT-2K34	1
+JF261518	14	UNB OTU7 clone 44	3
+AB284830	15	Papm3 clone BL17	1
+AB284834	15	Papm3 clone BL58	1
+AB284831	15	Papm3 clone BL23	1
+FJ905640	16	AV19F clone 42b	2
+FJ905738	16	V1F clone 105b	1
+FJ205312	17	ELSC clone 100	3
+HQ206656	18	Laboratory enrichment JMM_Dock-D2b-C6	1
+HQ206657	18	Laboratory enrichment JMM_S1-C-H1a	1
+JF320755	19	SPL OTU11 clone 31	2
+EU574668	20	2-WB OTU8 clone 7	2
+FJ905621	21	AV19F clone 13b	1
+FJ905748	21	V1F clone 125b	1
+EU491223	22	PV-549_X2 clone P9X2b7H12	1
+EU491311	22	PV-549_X2 clone P9X2b8F02	1
+HQ206653	23	Mariprofundus sp. strain GSB2	1
+AY197408	24	Guaymas Core B clone B03R022	1
+FJ905673	25	AV19F clone 106b	1
+FJ535293	26	Kermadec Arc clone CF-30	1
+FJ535342	27	Kermadec Arc clone TS-20	1
+FJ497401	28	Vailulu'u Seamount clone VS_CL-152	1

@@ -1,0 +1,12 @@
+.container {
+  overflow: scroll;
+  width: 1600px;
+  white-space: pre;
+  font-family: monospace;
+}
+
+.files {
+  overflow: scroll;
+  width: 800px;
+  height: 600px;
+}

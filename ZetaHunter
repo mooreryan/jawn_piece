@@ -1,0 +1,3 @@
+#!/bin/bash
+
+time ruby zeta_hunter.rb && echo && echo "CHECK IT OUT SEANIE" && echo && echo && cat output/final_otu_calls.txt

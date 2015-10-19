@@ -1,0 +1,3 @@
+/Users/moorer/projects/ZetaHunter/output/masked_for_phylip.fa
+I
+Y
