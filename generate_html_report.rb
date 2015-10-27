@@ -134,14 +134,35 @@ File.open(otu_calls_f).each_line do |line|
 end
 
 # # get colors for the degapped thing
-# all_seqs = []
-# otu_info.each_with_index do |(seq_name, otu), idx|
-#   unless degapped_seqs.has_key? seq_name
-#     abort "ERROR: #{degapped_alignment_f} doesn't contain #{seq_name}, but #{otu_calls_f} does"
-#   end
+all_seqs = []
+otu_info.each_with_index do |(seq_name, otu), idx|
+  unless degapped_seqs.has_key? seq_name
+    abort "ERROR: #{degapped_alignment_f} doesn't contain #{seq_name}, but #{otu_calls_f} does"
+  end
 
-#   seq = degapped_seqs[seq_name]
-#   all_seqs << seq.chars
+  seq = degapped_seqs[seq_name]
+  all_seqs << seq.chars
+end
+
+num_seqs = all_seqs.count.to_f
+positional_color = all_seqs.transpose.map.with_index do |arr, which_pos|
+  # count number of each sequence
+  base_counts = arr.each_with_object(Hash.new(0)) do |base, hash|
+    hash[base] += 1
+  end
+
+  base_freqs = base_counts.map do |base, count|
+    [base, count / num_seqs]
+  end
+
+  max_freq = base_freqs.sort_by { |_, freq| freq }.reverse.first.last
+
+  (1 - max_freq).round(2)
+end
+
+# positional_color.each_with_index do |n, i|
+#   puts [i+1, n].join "\t"
+# end
 
 # make degapped string for html file
 degapped_seqs_html_string = ""
@@ -153,11 +174,18 @@ otu_info.each_with_index do |(seq_name, otu), idx|
   if idx.zero?
     step_str = make_step_str degapped_seqs[seq_name].length
     degapped_seqs_html_string = "%-20.20s | %-20.20s | %s\n" % ["OTU", "Sequence name", step_str]
-  else
-    seq = degapped_seqs[seq_name]
-    this_string = "%-20.20s | %-20.20s | %s\n" % [otu, seq_name, seq]
-    degapped_seqs_html_string << this_string
   end
+
+  seq = degapped_seqs[seq_name]
+
+  seq_html_str = ""
+  seq.each_char.with_index do |char, idx|
+    color = positional_color[idx]
+    seq_html_str << %Q|<span style="background-color:rgba(17,186,138,#{color}">#{char}</span>|
+  end
+
+  this_string = "%-20.20s | %-20.20s | %s\n" % [otu, seq_name, seq_html_str]
+  degapped_seqs_html_string << this_string
 end
 
 # make closed ref info html file
