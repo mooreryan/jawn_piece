@@ -1,5 +1,54 @@
 #!/usr/bin/env ruby
 
+def round_down num
+  rnum = num.round(-1)
+  if rnum > num
+    rnum -= 10
+  end
+
+  rnum
+end
+
+def steps last
+  (10..last).step(10)
+end
+
+def make_step_str total_len
+  last = round_down total_len
+
+  the_steps = steps last
+
+  str = "~" * total_len
+
+  start_str = "Sequence"
+  start_str.each_char.with_index do |char, idx|
+    str[idx] = char
+  end
+
+  the_steps.each do |pos| # one based
+    str_pos = pos.to_s
+    len = str_pos.length
+
+    (pos-1 .. pos-1+len).each_with_index do |n, idx|
+      if idx.zero?
+        str[n] = "|"
+      else
+        str[n] = str_pos[idx-1]
+      end
+    end
+  end
+
+  str
+end
+
+def round_if_needed str
+  if str.match(/^[0-9]+\.[0-9]+$/)
+    str.to_f.round(5)
+  else
+    str
+  end
+end
+
 def check_f fname
   unless File.exists? fname
     abort "ERROR: File does not exist -- #{f}"
@@ -17,6 +66,8 @@ def file_to_table fname
 
     str = "<tr>"
     line.chomp.split("\t").each do |elem|
+      elem = round_if_needed elem
+
       str << "<%s>%s</%s>" % [tag, elem, tag]
     end
     str << "</tr>"
@@ -38,7 +89,7 @@ Ryan.req *%w[parse_fasta]
 opts = Trollop.options do
   banner <<-EOS
 
-  Info
+  Pass in the outdir from ZetaHunter and get a nice html report.
 
   Options:
   EOS
@@ -82,16 +133,31 @@ File.open(otu_calls_f).each_line do |line|
   end
 end
 
+# # get colors for the degapped thing
+# all_seqs = []
+# otu_info.each_with_index do |(seq_name, otu), idx|
+#   unless degapped_seqs.has_key? seq_name
+#     abort "ERROR: #{degapped_alignment_f} doesn't contain #{seq_name}, but #{otu_calls_f} does"
+#   end
+
+#   seq = degapped_seqs[seq_name]
+#   all_seqs << seq.chars
+
 # make degapped string for html file
-degapped_seqs_html_string = "%-20.20s | %-20.20s | %s\n" % ["OTU", "Sequence name", "Sequence"]
-otu_info.each do |seq_name, otu|
+degapped_seqs_html_string = ""
+otu_info.each_with_index do |(seq_name, otu), idx|
   unless degapped_seqs.has_key? seq_name
     abort "ERROR: #{degapped_alignment_f} doesn't contain #{seq_name}, but #{otu_calls_f} does"
   end
 
-  seq = degapped_seqs[seq_name]
-  this_string = "%-20.20s | %-20.20s | %s\n" % [otu, seq_name, seq]
-  degapped_seqs_html_string << this_string
+  if idx.zero?
+    step_str = make_step_str degapped_seqs[seq_name].length
+    degapped_seqs_html_string = "%-20.20s | %-20.20s | %s\n" % ["OTU", "Sequence name", step_str]
+  else
+    seq = degapped_seqs[seq_name]
+    this_string = "%-20.20s | %-20.20s | %s\n" % [otu, seq_name, seq]
+    degapped_seqs_html_string << this_string
+  end
 end
 
 # make closed ref info html file
