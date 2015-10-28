@@ -181,7 +181,7 @@ otu_info.each_with_index do |(seq_name, otu), idx|
   seq_html_str = ""
   seq.each_char.with_index do |char, idx|
     color = positional_color[idx]
-    seq_html_str << %Q|<span style="background-color:rgba(17,186,138,#{color}">#{char}</span>|
+    seq_html_str << %Q|<span style="background-color: rgba(17,186,138,#{color}">#{char}</span>|
   end
 
   this_string = "%-20.20s | %-20.20s | %s\n" % [otu, seq_name, seq_html_str]
@@ -229,6 +229,7 @@ html = %Q{<!DOCTYPE html>
   </head>
 
   <body>
+    <h1>ZetaHunter v0.0.1</h1>
     <h2>Degapped alignment</h2>
     <div class="container" id="degapped-alignment">
 #{degapped_seqs_html_string}
