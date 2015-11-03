@@ -1,8 +1,5 @@
 #!/usr/bin/env ruby
 
-
-
-
 Signal.trap("PIPE", "EXIT")
 
 methods = File.join(File.expand_path("~"), "lib", "ruby", "ryan.rb")
@@ -10,7 +7,7 @@ require_relative methods
 require_relative "const"
 require_relative "pintail_methods"
 
-Ryan.req *%w[parse_fasta fail_fast parallel]
+Ryan.req *%w[parse_fasta fail_fast parallel set]
 
 include FailFast::Assertions
 
@@ -51,6 +48,7 @@ subj = nil
 n = 0
 masked_db_seq_names = []
 queries = {}
+flagged_queries = Set.new
 
 # get just the masked bases
 FastaFile.open(Const::DATABASE).each_record do |head, seq|
@@ -82,9 +80,12 @@ positional_variability = get_positional_variability masked_db_seqs
 windowed_avg_probs = get_windowed_avg_probs positional_variability
 database_overall_evol_dist = mean(windowed_avg_probs.map(&:last))
 
-too_low_f = File.open(File.join(opts[:outdir], "pintail.too_low.txt"), "w")
-too_high_f = File.open(File.join(opts[:outdir], "pintail.too_high.txt"), "w")
-just_right_f = File.open(File.join(opts[:outdir], "pintail.just_right.txt"), "w")
+too_low_f =
+  File.open(File.join(opts[:outdir], "pintail.too_low.txt"), "w")
+too_high_f =
+  File.open(File.join(opts[:outdir], "pintail.too_high.txt"), "w")
+just_right_f =
+  File.open(File.join(opts[:outdir], "pintail.just_right.txt"), "w")
 
 [too_low_f, too_high_f, just_right_f].each do |f|
   f.puts %w[query.name query.seq subject.name subject.seq dist de de.lower.bound de.upper.bound flag].
@@ -122,6 +123,7 @@ queries.each_with_index do |(query_name, query), qi|
 
     if de < lower.to_f
       flag = "too_low"
+      flagged_queries << query_name
       too_low_f.puts [query_name,
                       query,
                       subj_name,
@@ -135,6 +137,7 @@ queries.each_with_index do |(query_name, query), qi|
       plot_diffs exp_perc_diffs, obs_perc_diffs, :too_low, query_name, subj_name
     elsif de > upper.to_f
       flag = "too_high"
+      flagged_queries << query_name
       too_high_f.puts [query_name,
                        query,
                        subj_name,
@@ -171,3 +174,12 @@ $stderr.puts
 too_low_f.close
 too_high_f.close
 just_right_f.close
+
+
+File.open(File.join(Const::ASSETS_FOLDER,
+                    "queries.pintail_flagged.txt"),
+          "w") do |f|
+  flagged_queries.sort.each do |query|
+    f.puts query
+  end
+end

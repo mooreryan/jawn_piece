@@ -3,3 +3,4 @@ output
 from_seanie
 *.html
 .Rhistory
+assets/queries.pintail_flagged.txt
