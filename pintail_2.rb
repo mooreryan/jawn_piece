@@ -81,11 +81,11 @@ windowed_avg_probs = get_windowed_avg_probs positional_variability
 database_overall_evol_dist = mean(windowed_avg_probs.map(&:last))
 
 too_low_f =
-  File.open(File.join(opts[:outdir], "pintail.too_low.txt"), "w")
+  File.open(File.join(PINTAIL_FOLDER, "pintail.too_low.txt"), "w")
 too_high_f =
-  File.open(File.join(opts[:outdir], "pintail.too_high.txt"), "w")
+  File.open(File.join(PINTAIL_FOLDER, "pintail.too_high.txt"), "w")
 just_right_f =
-  File.open(File.join(opts[:outdir], "pintail.just_right.txt"), "w")
+  File.open(File.join(PINTAIL_FOLDER, "pintail.just_right.txt"), "w")
 
 [too_low_f, too_high_f, just_right_f].each do |f|
   f.puts %w[query.name query.seq subject.name subject.seq dist de de.lower.bound de.upper.bound flag].

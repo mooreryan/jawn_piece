@@ -55,6 +55,7 @@ Signal.trap("PIPE", "EXIT")
 
 methods = File.join(File.expand_path("~"), "lib", "ruby", "ryan.rb")
 require_relative methods
+require_relative "const"
 
 Ryan.req *%w[parse_fasta set fail_fast]
 
@@ -91,6 +92,9 @@ alignment = Ryan.check_file(opts[:alignment], :alignment)
 database = Ryan.check_file(opts[:database], :database)
 Ryan.try_mkdir(opts[:outdir])
 
+# use this in place of opts[:alignment]
+queries_no_chimeras = File.join opts[:outdir], "queries_no_chimeras.fa"
+
 masked_seqs = File.join opts[:outdir], "masked_alignment.fa"
 degapped_seqs = File.join opts[:outdir], "degapped_alignment.fa"
 masked_for_phylip = File.join opts[:outdir], "masked_for_phylip.fa"
@@ -109,12 +113,13 @@ de_novo_dist = File.join opts[:outdir], "de_novo.dist"
 de_novo_otu_calls = File.join opts[:outdir], "de_novo_otu_calls.txt"
 final_otu_calls = File.join opts[:outdir], "final_otu_calls.txt"
 
+# external scripts
+pintail = File.join this_dir, "pintail_2.rb"
 
 Ryan.try_mkdir dotur_outdir
 
 SILVA_ALN_LEN = 50000
 OTU_LEVEL = 0.03
-
 
 mask = ""
 mask_posns = []
@@ -132,9 +137,37 @@ seqs_to_cluster_de_novo = nil
 dist_info = nil
 idx_to_seq_name = nil
 closed_otu_info = nil
+flagged_seqs = Set.new
 
+Ryan.time_it("Check for chimeras") do
+  # TODO run this every time?
+  if !File.exists? Const::FLAGGED_SEQS
+    Ryan.time_it("Run Zintail") do
+      cmd = "ruby #{pintail} " +
+            "--queries #{opts[:alignment]} " +
+            "--outdir #{opts[:outdir]}"
+      Ryan.run_it cmd
+    end
+  end
 
-Ryan.time_it("0 Get database OTU metadata info") do
+  File.open(Const::FLAGGED_SEQS).each_line do |line|
+    flagged_seqs << line.chomp
+  end
+end
+
+Ryan.time_it("Remove chimeras") do
+  # note, if there are no chimera flagged seqs, then
+  # queries_no_chimeras and opts[:alignment] will be the same
+  File.open(queries_no_chimeras, "w") do |f|
+    FastaFile.open(opts[:alignment]).each_record do |head, seq|
+      unless flagged_seqs.include? head
+        f.printf ">%s\n%s\n", head, seq
+      end
+    end
+  end
+end
+
+Ryan.time_it("Get database OTU metadata info") do
   lineno = 0
   File.open(opts[:db_otu_info]).each_line do |line|
     unless lineno.zero?
@@ -151,7 +184,7 @@ Ryan.time_it("0 Get database OTU metadata info") do
   end
 end
 
-Ryan.time_it("1 Read the database for gaps and mask") do
+Ryan.time_it("Read the database for gaps and mask") do
   FastaFile.open(opts[:database]).each_record do |head, seq|
     # ensure each sequence in the database is the proper length
     unless seq.length == SILVA_ALN_LEN
@@ -193,15 +226,15 @@ Ryan.time_it("1 Read the database for gaps and mask") do
   end
 end
 
-Ryan.time_it("2 Update gap posns from user seqs & trim mask") do
+Ryan.time_it("Update gap posns from user seqs & trim mask") do
   # first run through the sequences to adjust the mask
-  FastaFile.open(opts[:alignment]).each_record do |head, seq|
+  FastaFile.open(queries_no_chimeras).each_record do |head, seq|
     unless seq.length == SILVA_ALN_LEN
-      warn "ERROR: #{head} in #{opts[:alignment]} is #{seq.length} bases, should be #{SILVA_ALN_LEN}"
+      warn "ERROR: #{head} in #{queries_no_chimeras} is #{seq.length} bases, should be #{SILVA_ALN_LEN}"
     end
 
     if user_provided_headers.include? head
-      abort "ERROR: #{head} duplicated in #{opts[:alignment]}"
+      abort "ERROR: #{head} duplicated in #{queries_no_chimeras}"
     end
 
     user_provided_headers << head
@@ -228,10 +261,10 @@ Ryan.time_it("2 Update gap posns from user seqs & trim mask") do
   end
 end
 
-Ryan.time_it("3 Apply mask to seqs & write") do
+Ryan.time_it("Apply mask to seqs & write") do
   # apply the mask, figure out gaps
   File.open(masked_seqs, "w") do |f|
-    FastaFile.open(opts[:alignment]).each_record do |head, seq|
+    FastaFile.open(queries_no_chimeras).each_record do |head, seq|
       masked_seq = mask_posns.map { |i| seq[i] }.join("").gsub(/U/, "T").gsub(/u/, "t")
 
       f.printf ">%s\n%s\n", head, masked_seq
@@ -245,12 +278,12 @@ Ryan.time_it("3 Apply mask to seqs & write") do
   end
 end
 
-Ryan.time_it("3.5 Write degapped alignment") do
+Ryan.time_it("Write degapped alignment") do
 
   shared_gap_posns = gap_posns.reduce(:&)
 
   File.open(degapped_seqs, "w") do |f|
-    FastaFile.open(opts[:alignment]).each_record do |head, seq|
+    FastaFile.open(queries_no_chimeras).each_record do |head, seq|
       seq = seq.gsub(/U/, "T").gsub(/u/, "t")
 
       f.printf ">%s\n", head
@@ -272,7 +305,7 @@ Ryan.time_it("3.5 Write degapped alignment") do
   end
 end
 
-Ryan.time_it("4 Make masked_for_phylip.fa") do
+Ryan.time_it("Make masked_for_phylip.fa") do
 
   aln_len = nil
   num_seqs = 0
@@ -309,7 +342,7 @@ Ryan.time_it("4 Make masked_for_phylip.fa") do
   end
 end
 
-Ryan.time_it("5 Write the DNAdist params file") do
+Ryan.time_it("Write the DNAdist params file") do
   # write the phylip input file
 
   File.open(phylip_infile, 'w') do |f|
@@ -319,12 +352,12 @@ Ryan.time_it("5 Write the DNAdist params file") do
   end
 end
 
-Ryan.time_it("6 DNAdist") do
+Ryan.time_it("DNAdist") do
   Ryan.run_it "#{dnadist} < #{phylip_infile}"
   Ryan.run_it "mv #{phylip_outfile} #{masked_dist}"
 end
 
-Ryan.time_it("? Closed reference OTU assignment") do
+Ryan.time_it("Closed reference OTU assignment") do
   closed_otu_info = {}
 
   dist_info, idx_to_seq_name = parse_dist_f masked_dist
@@ -413,7 +446,7 @@ Ryan.time_it("? Closed reference OTU assignment") do
   end
 end
 
-Ryan.time_it("? Write the dist file for de novo clustering") do
+Ryan.time_it("Write the dist file for de novo clustering") do
   # note which user seqs need to be clustered de novo
   seqs_to_remove = Set.new closed_otu_info.keys
   seqs_to_cluster_de_novo = user_provided_headers - seqs_to_remove
@@ -460,12 +493,12 @@ Ryan.time_it("? Write the dist file for de novo clustering") do
   end
 end
 
-Ryan.time_it("7 DOTUR on the de novo seqs") do
+Ryan.time_it("DOTUR on the de novo seqs") do
   Ryan.run_it "#{dotur} #{de_novo_dist}"
   Ryan.run_it "mv #{de_novo_dist.sub(/dist$/, "fn")}.* #{dotur_outdir}"
 end
 
-Ryan.time_it("8 Read DOTUR OTU calls") do
+Ryan.time_it("Read DOTUR OTU calls") do
   File.open(otu_calls).each_line do |line|
     unless line.start_with? "unique"
       cutoff, num, *rest = line.chomp.split "\t"
@@ -486,7 +519,7 @@ Ryan.time_it("8 Read DOTUR OTU calls") do
 end
 
 
-Ryan.time_it("9 Pick cutoff closest to #{OTU_LEVEL}") do
+Ryan.time_it("Pick cutoff closest to #{OTU_LEVEL}") do
   # which cutoff to use? get closest to OTU_LEVEL without going over
   otu_calls_info.each do |cutoff, otu_group|
     # TODO optimize this with a break
@@ -500,7 +533,7 @@ Ryan.time_it("9 Pick cutoff closest to #{OTU_LEVEL}") do
   assert which_cutoff != -1
 end
 
-Ryan.time_it("? Report de novo OTU calls") do
+Ryan.time_it("Report de novo OTU calls") do
   File.open(de_novo_otu_calls, "w") do |f|
     f.puts %w[query otu].join "\t"
     otu_calls_info[which_cutoff].each_with_index do |otu_group, otu_num|
@@ -511,7 +544,7 @@ Ryan.time_it("? Report de novo OTU calls") do
   end
 end
 
-Ryan.time_it("? Write final OTU calls") do
+Ryan.time_it("Write final OTU calls") do
   File.open(final_otu_calls, "w") do |f|
     queries = {}
     File.open(closed_ref_otu_calls).each_line do |line|
