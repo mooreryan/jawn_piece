@@ -192,14 +192,16 @@ PintailPair.set_percentile_group_de_range pintail_pairs
 #         pair.max_de].join "\t"
 # end
 
-puts ["dist.cutoff",
-      "percentile.group",
-      "pairs.in.percentile",
-      "low.de",
-      "high.de"].join "\t"
-groups = pintail_pairs.group_by { |pair| pair.dist_percentile_group }
-groups.each do |group, pairs|
-  count = pairs.count
-  first = pairs.sort_by { |pair| pair.dist }.reverse.first
-  puts [first.dist, group, count, first.min_de, first.max_de].join "\t"
+File.open(Const::DE_DIST_PERCENTILES, "w") do |f|
+  f.puts ["dist.cutoff",
+          "percentile.group",
+          "pairs.in.percentile",
+          "low.de",
+          "high.de"].join "\t"
+  groups = pintail_pairs.group_by { |pair| pair.dist_percentile_group }
+  groups.each do |group, pairs|
+    count = pairs.count
+    first = pairs.sort_by { |pair| pair.dist }.reverse.first
+    f.puts [first.dist, group, count, first.min_de, first.max_de].join "\t"
+  end
 end

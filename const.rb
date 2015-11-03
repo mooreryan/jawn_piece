@@ -9,6 +9,8 @@ module Const
   ASSETS = "assets"
 
   DE_DIST = File.join ASSETS, "database_DE_dist.txt"
+  DE_DIST_PERCENTILES =
+    File.join ASSETS, "database_DE_dist_percentiles.txt"
 
   NUM_PERCENTILES = 10
 end
