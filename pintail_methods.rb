@@ -104,7 +104,17 @@ def mean_obs_perc_dist windowed_str_mismatch
   mean(diffs)
 end
 
-def write_rscript exp_perc_diffs, obs_perc_diffs
+def rpdf which, qname, sname
+  if which == :too_low
+    File.join PINTAIL_GRAPHS_LOW_FOLDER, "pintail_plot.query_#{qname}.subject_#{sname}.pdf"
+  elsif which == :too_high
+    File.join PINTAIL_GRAPHS_HIGH_FOLDER, "pintail_plot.query_#{qname}.subject_#{sname}.pdf"
+  else
+    abort "ARGUMENT ERROR: must be :too_low or :too_high, got #{which.inspect}"
+  end
+end
+
+def write_rscript exp_perc_diffs, obs_perc_diffs, which, qname, sname
   e_xs = exp_perc_diffs.map(&:first).join(",")
   e_ys = exp_perc_diffs.map(&:last).join(",")
 
@@ -112,7 +122,7 @@ def write_rscript exp_perc_diffs, obs_perc_diffs
   o_ys = obs_perc_diffs.map(&:last).join(",")
 
   rscript = %Q{
-pdf("#{RPDF}", height = 8, width = 12)
+pdf("#{rpdf(which, qname, sname)}", height = 8, width = 12)
 e.xs <- c(#{e_xs})
 e.ys <- c(#{e_ys})
 
@@ -128,6 +138,7 @@ plot(ylim = c(0, 50), #c(0, max.y),
      type = "l",
      xlab = "Position",
      ylab = "Percent difference",
+     main = "#{qname} vs. #{sname}",
      lwd = 2)
 
 points(o.xs, o.ys, col = "red", type = "l", lwd = 3)
@@ -136,24 +147,23 @@ points(e.xs, e.ys - 5, col = "gray70", type = "l", lwd = 1, lty = 2)
 invisible(dev.off())
 }
 
-  File.open(RSCRIPT, "w") do |f|
+  File.open(Const::RSCRIPT, "w") do |f|
     f.puts rscript
   end
 end
 
 def run_rscript
-  Ryan.run_it "Rscript #{RSCRIPT}"
+  Ryan.run_it "Rscript #{Const::RSCRIPT}"
 end
 
 def clean_rscript
-  Ryan.run_it "rm #{RSCRIPT}"
+  Ryan.run_it "rm #{Const::RSCRIPT}"
 end
 
-def plot_diffs exp_perc_diffs, obs_perc_diffs
-  write_rscript exp_perc_diffs, obs_perc_diffs
+def plot_diffs exp_perc_diffs, obs_perc_diffs, which, qname, sname
+  write_rscript exp_perc_diffs, obs_perc_diffs, which, qname, sname
   run_rscript
   clean_rscript
-  Ryan.run_it "open #{RPDF}"
 end
 
 # zero based

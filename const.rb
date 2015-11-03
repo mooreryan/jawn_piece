@@ -6,13 +6,16 @@ module Const
 
   DATABASE = File.join "test_files", "database.fa"
 
-  ASSETS = "assets"
+  ASSETS_FOLDER = "assets"
 
-  DE_DIST = File.join ASSETS, "database_DE_dist.txt"
+  DE_DIST = File.join ASSETS_FOLDER, "database_DE_dist.txt"
   DE_DIST_PERCENTILES =
-    File.join ASSETS, "database_DE_dist_percentiles.txt"
+    File.join ASSETS_FOLDER, "database_DE_dist_percentiles.txt"
 
   NUM_PERCENTILES = 10
+
+  RSCRIPT = File.join ASSETS_FOLDER, "pintail_plot.r"
+
 end
 
-Ryan.try_mkdir Const::ASSETS
+Ryan.try_mkdir Const::ASSETS_FOLDER
