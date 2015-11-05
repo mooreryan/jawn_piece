@@ -21,7 +21,8 @@ opts = Trollop.options do
   EOS
 
   opt(:threads, "Number of threads", type: :int, default: 3)
-  opt(:force, "Force overwrite of the database_DE_dist.txt file")
+  opt(:force, "Force overwrite of the database_DE_dist.txt file",
+      default: true)
 end
 
 if opts[:threads] < 1

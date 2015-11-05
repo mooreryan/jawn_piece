@@ -1,0 +1,1 @@
+gcc -Wall -c methods.c -o methods.o && gcc -shared -o methods.so methods.o

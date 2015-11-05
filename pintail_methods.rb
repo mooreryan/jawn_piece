@@ -1,4 +1,5 @@
 require_relative "const"
+require_relative "c_methods"
 
 def get_de obs_perc_diffs, exp_perc_diffs
   opd_vals = obs_perc_diffs.map(&:last)
@@ -16,7 +17,8 @@ def windows str
   range = (0..str.length - Const::WINDOW_SIZE)
 
   range.step(Const::WINDOW_STEP).map do |start|
-    [(start*2+Const::WINDOW_SIZE)/2.0, str[start, Const::WINDOW_SIZE]]
+    xposn = ((start+1) + (start+1 + Const::WINDOW_SIZE-1)) / 2.0
+    [xposn, str[start, Const::WINDOW_SIZE]]
   end
 end
 
@@ -65,12 +67,17 @@ def iupac_match? char1, char2
   end
 end
 
+def get_bases_by_posn str1, str2
+  [str1.chars, str2.chars].transpose
+end
+
 def perc_mismatch str1, str2
   assert str1.length == str2.length
 
-  bases_by_posn = [str1.chars, str2.chars].transpose
+  bases_by_posn = get_bases_by_posn str1, str2
 
-  num_mismatches = bases_by_posn.reject { |b1, b2| iupac_match?(b1,b2) }.count
+  num_mismatches = bases_by_posn.
+                   reject { |b1, b2| iupac_match?(b1,b2) }.count
 
   num_mismatches / str1.length.to_f * 100
 end
@@ -88,9 +95,10 @@ def windowed_str_mismatch str1, str2
   str2_windows = win.map(&:last)
 
 
+  # TODO wat?
   [str1_windows, str2_windows].
     transpose.map.with_index do |(win1, win2), idx|
-    [str1_starts[idx]+1, perc_mismatch(win1, win2)]
+    [str1_starts[idx]+1, CMethods.perc_mismatch(win1, win2)]
   end
 end
 
@@ -282,11 +290,12 @@ def get_DE_dist mask, threads
   de_values =
     Parallel.map_with_index(mask[:seqs].combination(2),
                             in_processes: threads) do |(query, subj), idx|
-
+    # mask[:seqs].combination(2).map.with_index do |(query, subj), idx|
     progress = (idx+1) / total * 100
     $stderr.printf "Progress: %.2f%%\r", progress
 
-    obs_perc_diffs = windowed_str_mismatch(query, subj)
+    obs_perc_diffs =
+      CMethods.windowed_str_mismatch_wrapper(query, subj)
     obs_evol_dist = mean_obs_perc_dist obs_perc_diffs
 
     fitting_coefficient = obs_evol_dist / database_overall_evol_dist
