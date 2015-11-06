@@ -4,10 +4,10 @@ module Const
 
   SILVA_LEN = 50000
 
-  DATABASE = File.join "test_files", "database.fa"
-  # DATABASE = File.join "test_files", "1000.bacteria.fa"
+  ASSETS_FOLDER = File.join File.dirname(__FILE__), "assets"
 
-  ASSETS_FOLDER = "assets"
+  DATABASE = File.join ASSETS_FOLDER, "database.fa"
+  # DATABASE = File.join "test_files", "1000.bacteria.fa"
 
   DE_DIST = File.join ASSETS_FOLDER, "database_DE_dist.txt"
   DE_DIST_PERCENTILES =

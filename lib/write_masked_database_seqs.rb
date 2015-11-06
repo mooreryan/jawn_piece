@@ -4,8 +4,8 @@ Signal.trap("PIPE", "EXIT")
 
 methods = File.join(File.expand_path("~"), "lib", "ruby", "ryan.rb")
 require_relative methods
-require_relative "const"
-require_relative "pintail_methods"
+require_relative "../const"
+require_relative "../pintail_methods"
 
 Ryan.req *%w[parse_fasta fail_fast parallel]
 
