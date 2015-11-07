@@ -60,3 +60,6 @@ File.open(Const::MASKED_DATABASE, "w") do |f|
     f.puts seq
   end
 end
+
+puts "Wrote #{Const::MASKED_DATABASE}"
+puts `ruby check_masked_db.rb`

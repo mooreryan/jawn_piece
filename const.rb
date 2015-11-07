@@ -7,7 +7,7 @@ module Const
   ASSETS_FOLDER = File.join File.dirname(__FILE__), "assets"
 
   DATABASE = File.join ASSETS_FOLDER, "database.fa"
-  # DATABASE = File.join "test_files", "1000.bacteria.fa"
+  # DATABASE = File.join ASSETS_FOLDER, "200.bacteria.fa"
 
   DE_DIST = File.join ASSETS_FOLDER, "database_DE_dist.txt"
   DE_DIST_PERCENTILES =

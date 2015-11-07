@@ -7,3 +7,4 @@ assets/queries.pintail_flagged.txt
 lib/*.o
 lib/*.so
 lib/*.dSYM
+lib/de_dist

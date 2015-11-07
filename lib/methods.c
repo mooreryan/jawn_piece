@@ -202,6 +202,46 @@ int num_windows(char *str)
   return (int) ceil((i - WINDOW_SIZE + 1) / (double) WINDOW_STEP);
 }
 
+int get_num_windows(int window_size, int window_step, int arr_len)
+{
+  return (int) ceil((arr_len - window_size + 1) / (double) window_step);
+}
+
+/* TODO this has a lot of duplication with windows function */
+struct Windows *double_windows(double *arr, int len)
+{
+  int i = 0;
+  int j = 0;
+  int window_idx = 0;
+  int window_num = 0;
+  int max = 0;
+  int start = 0;
+  double posn = 0.0;
+
+  int num_windows =
+    get_num_windows(WINDOW_SIZE, WINDOW_STEP, len);
+
+  struct Windows *windows = windows_new(num_windows);
+
+  /* this max is inclusive */
+  max = len - WINDOW_SIZE;
+
+  for (i = 0; i <= max; i += WINDOW_STEP) { /* each window start */
+    start = i;
+    posn = ((start+1) + (start+1 + WINDOW_SIZE-1)) / 2.0;
+
+    windows->xposns[window_num] = posn;
+
+    for (j = start; j < start + WINDOW_SIZE; j++) {
+      windows->dwindows[window_num][window_idx++] = arr[j];
+    }
+    window_num++;
+    window_idx = 0;
+  }
+
+  return windows;
+}
+
 struct Windows *windows(char *str)
 {
   int len = 0;
@@ -221,7 +261,7 @@ struct Windows *windows(char *str)
   len = i;
 
   int num_windows =
-    (int) ceil((len - WINDOW_SIZE + 1) / (double) WINDOW_STEP);
+    get_num_windows(WINDOW_SIZE, WINDOW_STEP, len);
 
   struct Windows *windows = windows_new(num_windows);
 
@@ -263,9 +303,15 @@ struct Windows *windows_new(int num_windows)
   windows->windows = malloc(num_windows * sizeof(char *));
   assert(windows->windows != NULL);
 
+  windows->dwindows = malloc(num_windows * sizeof(double *));
+  assert(windows->dwindows != NULL);
+
   for (i = 0; i < num_windows; i++) {
     windows->windows[i] = calloc(WINDOW_SIZE+1, sizeof(char));
     assert(windows->windows[i] != NULL);
+
+    windows->dwindows[i] = calloc(WINDOW_SIZE+1, sizeof(double));
+    assert(windows->dwindows[i] != NULL);
   }
 
   return windows;
@@ -281,13 +327,18 @@ void windows_free(struct Windows *windows)
   free(windows->xposns);
 
   assert(windows->windows != NULL);
+  assert(windows->dwindows != NULL);
 
   for (i = 0; i < windows->num_windows; i++) {
     assert(windows->windows[i] != NULL);
     free(windows->windows[i]);
+
+    assert(windows->dwindows[i] != NULL);
+    free(windows->dwindows[i]);
   }
 
   free(windows->windows);
+  free(windows->dwindows);
 
   free(windows);
 }
@@ -417,6 +468,18 @@ struct MismatchInfo *windowed_str_mismatch(char *str1, char *str2)
   minfo = minfo_new(twds);
 
   return minfo;
+}
+
+double arr_mean(double *arr, int len)
+{
+  double total = 0.0;
+  int i = 0;
+
+  for (i = 0; i < len; i++) {
+    total += arr[i];
+  }
+
+  return total / len;
 }
 
 /* int main() */

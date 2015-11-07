@@ -292,7 +292,7 @@ def get_DE_dist mask, threads
                             in_processes: threads) do |(query, subj), idx|
     # mask[:seqs].combination(2).map.with_index do |(query, subj), idx|
     progress = (idx+1) / total * 100
-    $stderr.printf "Progress: %.2f%%\r", progress
+    # $stderr.printf "Progress: %.2f%%\r", progress
 
     obs_perc_diffs =
       CMethods.windowed_str_mismatch_wrapper(query, subj)
@@ -311,7 +311,7 @@ def get_DE_dist mask, threads
      obs_evol_dist,
      get_de(obs_perc_diffs, exp_perc_diffs)]
   end
-  $stderr.puts
+  # $stderr.puts
 
   de_values
 end
