@@ -21,6 +21,8 @@ opts = Trollop.options do
   EOS
 
   opt(:threads, "Number of threads", type: :int, default: 3)
+  opt(:database, "Database", type: :string,
+      default: Const::DATABASE)
   opt(:force, "Force overwrite of the database_DE_dist.txt file",
       default: true)
 end
@@ -35,7 +37,8 @@ elsif File.exists?(Const::DE_DIST)
   warn "WARNING: Overwriting #{Const::DE_DIST}!"
 end
 
-mask = get_mask_info
+Ryan.log "Using database: #{opts[:database]}"
+mask = get_mask_info opts[:database]
 
 de_values = get_DE_dist mask, opts[:threads]
 

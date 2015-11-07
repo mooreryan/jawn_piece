@@ -11,6 +11,19 @@
 #define WINDOW_SIZE 300
 #define WINDOW_STEP 25
 
+double get_de(double *observed, double *expected, int len)
+{
+  int i = 0;
+  double total = 0.0;
+  double subt = 0.0;
+  for (i = 0; i < len; i++) {
+    subt = observed[i] - expected[i];
+    total += pow(subt, 2);
+  }
+
+  return sqrt(total / len);
+}
+
 int iupac_match(char c1, char c2)
 {
   c1 = toupper(c1);

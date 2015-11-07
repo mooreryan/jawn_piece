@@ -38,3 +38,5 @@ struct MismatchInfo *minfo_new(struct TwoWindows *twds);
 void minfo_free(struct MismatchInfo *minfo);
 
 double arr_mean(double *arr, int len);
+
+double get_de(double *observed, double *expected, int len);

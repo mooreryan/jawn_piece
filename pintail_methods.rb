@@ -247,13 +247,13 @@ def get_windowed_avg_probs positional_variability
 end
 
 # get the mask database seqs
-def get_mask_info
+def get_mask_info db
   seq_num          = 0
   mask_posns       = []
   masked_seqs      = []
   masked_seq_names = []
 
-  FastaFile.open(Const::DATABASE).each_record do |head, seq|
+  FastaFile.open(db).each_record do |head, seq|
     check_len seq
     check_first_head head, seq_num
 
@@ -288,9 +288,9 @@ def get_DE_dist mask, threads
   windowed_avg_probs, database_overall_evol_dist = get_database_pintail_info mask[:seqs]
 
   de_values =
-    Parallel.map_with_index(mask[:seqs].combination(2),
-                            in_processes: threads) do |(query, subj), idx|
-    # mask[:seqs].combination(2).map.with_index do |(query, subj), idx|
+  #   Parallel.map_with_index(mask[:seqs].combination(2),
+  #                           in_processes: threads) do |(query, subj), idx|
+    mask[:seqs].combination(2).map.with_index do |(query, subj), idx|
     progress = (idx+1) / total * 100
     # $stderr.printf "Progress: %.2f%%\r", progress
 
@@ -309,7 +309,7 @@ def get_DE_dist mask, threads
     [query_name,
      subj_name,
      obs_evol_dist,
-     get_de(obs_perc_diffs, exp_perc_diffs)]
+     CMethods.get_de_wrapper(obs_perc_diffs, exp_perc_diffs)]
   end
   # $stderr.puts
 
