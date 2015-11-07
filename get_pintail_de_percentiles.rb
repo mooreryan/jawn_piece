@@ -9,9 +9,7 @@ require "set"
 include FailFast::Assertions
 
 class PintailPair
-  attr_accessor :query,
-                :subj,
-                :dist,
+  attr_accessor :dist,
                 :de,
                 :dist_percentile,
                 :dist_percentile_group,
@@ -28,9 +26,7 @@ class PintailPair
   LOW_DE_PERCENTILE = (100 - CONFIDENCE) / 2.0
   HIGH_DE_PERCENTILE = CONFIDENCE + ((100 - CONFIDENCE) / 2.0)
 
-  def initialize query, subj, dist, de
-    @query = query
-    @subj  = subj
+  def initialize dist, de
     @dist  = dist.to_f
     @de    = de.to_f
   end
@@ -159,25 +155,28 @@ end
 
 keys = Set.new
 pintail_pairs = []
+lineno = 0
 File.open(Const::DE_DIST).each_line do |line|
-  unless line.start_with? "query"
-    query, subj, dist, de = line.chomp.split "\t"
+  unless lineno.zero?
+    dist, de = line.chomp.split "\t"
 
     # check for repeats
-    key = [query, subj].join " "
-    if keys.include? key
-      abort "ERROR #{query} #{subj} pair exists more than once " +
-            "in #{Const::DE_DIST}"
-    end
+    # key = [query, subj].join " "
+    # if keys.include? key
+    #   abort "ERROR #{query} #{subj} pair exists more than once " +
+    #         "in #{Const::DE_DIST}"
+    # end
 
-    pintail_pair = PintailPair.new(query, subj, dist, de)
+    # pintail_pair = PintailPair.new(query, subj, dist, de)
+    pintail_pair = PintailPair.new(dist, de)
     # TODO does this actuall work?
-    if pintail_pairs.include? pintail_pair
-      abort "ERROR #{query} #{subj} pair exists more than once " +
-            "in #{Const::DE_DIST}"
-    end
+    # if pintail_pairs.include? pintail_pair
+    #   abort "ERROR #{query} #{subj} pair exists more than once " +
+    #         "in #{Const::DE_DIST}"
+    # end
     pintail_pairs << pintail_pair
   end
+  lineno += 1
 end
 
 PintailPair.set_percentile_group pintail_pairs
