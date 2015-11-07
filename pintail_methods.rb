@@ -288,9 +288,9 @@ def get_DE_dist mask, threads
   windowed_avg_probs, database_overall_evol_dist = get_database_pintail_info mask[:seqs]
 
   de_values =
-  #   Parallel.map_with_index(mask[:seqs].combination(2),
-  #                           in_processes: threads) do |(query, subj), idx|
-    mask[:seqs].combination(2).map.with_index do |(query, subj), idx|
+    Parallel.map_with_index(mask[:seqs].combination(2),
+                            in_processes: threads) do |(query, subj), idx|
+    # mask[:seqs].combination(2).map.with_index do |(query, subj), idx|
     progress = (idx+1) / total * 100
     # $stderr.printf "Progress: %.2f%%\r", progress
 
@@ -306,8 +306,8 @@ def get_DE_dist mask, threads
     query_name = names_combos[idx].first
     subj_name  = names_combos[idx].last
 
-    [query_name,
-     subj_name,
+    [#query_name,
+     #subj_name,
      obs_evol_dist,
      CMethods.get_de_wrapper(obs_perc_diffs, exp_perc_diffs)]
   end

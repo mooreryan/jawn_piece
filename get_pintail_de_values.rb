@@ -43,9 +43,10 @@ mask = get_mask_info opts[:database]
 de_values = get_DE_dist mask, opts[:threads]
 
 File.open(Const::DE_DIST, "w") do |f|
-  f.puts %w[query subj dist de].join "\t"
+  # f.puts %w[query subj dist de].join "\t"
+  f.puts [de_values.count, 0, 0].join "\t"
 
-  de_values.each do |arr|
+  de_values.sort_by { |dist, de| dist }.each do |arr|
     f.puts arr.join "\t"
   end
 end

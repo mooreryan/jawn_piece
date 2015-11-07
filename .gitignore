@@ -8,3 +8,4 @@ lib/*.o
 lib/*.so
 lib/*.dSYM
 lib/de_dist
+lib/percentiles
