@@ -44,7 +44,7 @@ de_values = get_DE_dist mask, opts[:threads]
 
 File.open(Const::DE_DIST, "w") do |f|
   # f.puts %w[query subj dist de].join "\t"
-  f.puts [de_values.count, 0, 0].join "\t"
+  f.puts de_values.count
 
   de_values.sort_by { |dist, de| dist }.each do |arr|
     f.puts arr.join "\t"
