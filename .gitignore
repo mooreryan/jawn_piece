@@ -9,3 +9,5 @@ lib/*.so
 lib/*.dSYM
 lib/de_dist
 lib/percentiles
+assets/database_DE_dist_percentiles.txt
+assets/database_DE_dist.txt
