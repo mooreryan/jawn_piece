@@ -88,7 +88,7 @@ just_right_f =
   File.open(File.join(PINTAIL_FOLDER, "pintail.just_right.txt"), "w")
 
 [too_low_f, too_high_f, just_right_f].each do |f|
-  f.puts %w[query.name query.seq subject.name subject.seq dist de de.lower.bound de.upper.bound flag].
+  f.puts %w[query.name query.seq subject.name subject.seq dist de de.99th flag].
           join "\t"
 end
 
@@ -110,32 +110,46 @@ queries.each_with_index do |(query_name, query), qi|
 
     de = get_de(obs_perc_diffs, exp_perc_diffs)
 
-    lower = upper = nil
+    pgroup = count = dist = p5 = nil
     File.open(Const::DE_DIST_PERCENTILES).each_line do |line|
       unless line.start_with? "dist"
-        less_than, _, _, lower, upper = line.chomp.split
+        pgroup, count, dist, p1, p2, p3, p4, p5 = line.chomp.split "\t"
 
-        if obs_evol_dist < less_than.to_f
+        if obs_evol_dist < dist.to_f
           break
         end
       end
     end
 
-    if de < lower.to_f
-      flag = "too_low"
-      flagged_queries << query_name
-      too_low_f.puts [query_name,
-                      query,
-                      subj_name,
-                      subj,
-                      "%.3f" % obs_evol_dist,
-                      "%.3f" % de,
-                      lower,
-                      upper,
-                      flag].join "\t"
-      warn "WARNING: #{query_name} - #{subj_name} pair flagged too low"
-      plot_diffs exp_perc_diffs, obs_perc_diffs, :too_low, query_name, subj_name
-    elsif de > upper.to_f
+    # if de < lower.to_f
+    #   flag = "too_low"
+    #   flagged_queries << query_name
+    #   too_low_f.puts [query_name,
+    #                   query,
+    #                   subj_name,
+    #                   subj,
+    #                   "%.3f" % obs_evol_dist,
+    #                   "%.3f" % de,
+    #                   lower,
+    #                   upper,
+    #                   flag].join "\t"
+    #   warn "WARNING: #{query_name} - #{subj_name} pair flagged too low"
+    #   plot_diffs exp_perc_diffs, obs_perc_diffs, :too_low, query_name, subj_name
+    # elsif de > upper.to_f
+    #   flag = "too_high"
+    #   flagged_queries << query_name
+    #   too_high_f.puts [query_name,
+    #                    query,
+    #                    subj_name,
+    #                    subj,
+    #                    "%.3f" % obs_evol_dist,
+    #                    "%.3f" % de,
+    #                    lower,
+    #                    upper,
+    #                    flag].join "\t"
+    #   plot_diffs exp_perc_diffs, obs_perc_diffs, :too_high, query_name, subj_name
+  #   warn "WARNING: #{query_name} - #{subj_name} pair flagged too high"
+    if de > p5.to_f
       flag = "too_high"
       flagged_queries << query_name
       too_high_f.puts [query_name,
@@ -144,8 +158,7 @@ queries.each_with_index do |(query_name, query), qi|
                        subj,
                        "%.3f" % obs_evol_dist,
                        "%.3f" % de,
-                       lower,
-                       upper,
+                       p5,
                        flag].join "\t"
       plot_diffs exp_perc_diffs, obs_perc_diffs, :too_high, query_name, subj_name
       warn "WARNING: #{query_name} - #{subj_name} pair flagged too high"
@@ -157,8 +170,7 @@ queries.each_with_index do |(query_name, query), qi|
                          subj,
                          "%.3f" % obs_evol_dist,
                          "%.3f" % de,
-                         lower,
-                         upper,
+                         p5,
                          flag].join "\t"
     end
 

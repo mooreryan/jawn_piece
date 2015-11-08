@@ -141,13 +141,13 @@ flagged_seqs = Set.new
 
 Ryan.time_it("Check for chimeras") do
   # TODO run this every time?
-  if !File.exists? Const::FLAGGED_SEQS
-    Ryan.time_it("Run Zintail") do
-      cmd = "ruby #{pintail} " +
-            "--queries #{opts[:alignment]} " +
-            "--outdir #{opts[:outdir]}"
-      Ryan.run_it cmd
-    end
+  # if !File.exists? Const::FLAGGED_SEQS
+  Ryan.time_it("Run Zintail") do
+    cmd = "ruby #{pintail} " +
+          "--queries #{opts[:alignment]} " +
+          "--outdir #{opts[:outdir]}"
+    Ryan.run_it cmd
+    # end
   end
 
   File.open(Const::FLAGGED_SEQS).each_line do |line|
