@@ -165,15 +165,17 @@ end
 # end
 
 # make degapped string for html file
-degapped_seqs_html_string = ""
-otu_info.each_with_index do |(seq_name, otu), idx|
+degapped_seqs_html_string = []
+otu_info.sort_by { |name, otu| otu }.each_with_index do |(seq_name, otu), idx|
   unless degapped_seqs.has_key? seq_name
     abort "ERROR: #{degapped_alignment_f} doesn't contain #{seq_name}, but #{otu_calls_f} does"
   end
 
-  if idx.zero?
+  if (idx % 10).zero?
     step_str = make_step_str degapped_seqs[seq_name].length
-    degapped_seqs_html_string = "%-20.20s | %-20.20s | %s\n" % ["OTU", "Sequence name", step_str]
+    step_html_str = "%-20.20s | %-20.20s | %s\n" % ["OTU", "Sequence name", step_str]
+  else
+    step_html_str = ""
   end
 
   seq = degapped_seqs[seq_name]
@@ -185,8 +187,18 @@ otu_info.each_with_index do |(seq_name, otu), idx|
   end
 
   this_string = "%-20.20s | %-20.20s | %s\n" % [otu, seq_name, seq_html_str]
-  degapped_seqs_html_string << this_string
+  degapped_seqs_html_string << (step_html_str + this_string)
 end
+
+all_alignments_html =
+  degapped_seqs_html_string.each_slice(10).map do |strs|
+  first_part = %Q{<div class="container" id="degapped-alignment">\n}
+  last_part  = "\n</div>\n"
+
+  first_part + strs.join + last_part
+end.join "\n"
+
+
 
 # make closed ref info html file
 closed_ref = file_to_table closed_ref_otu_info_f
@@ -231,9 +243,8 @@ html = %Q{<!DOCTYPE html>
   <body>
     <h1>ZetaHunter v0.0.1</h1>
     <h2>Degapped alignment</h2>
-    <div class="container" id="degapped-alignment">
-#{degapped_seqs_html_string}
-    </div>
+
+#{all_alignments_html}
 
     <h2>Closed reference OTU info</h2>
     <div id="closed-ref-otu-info">
