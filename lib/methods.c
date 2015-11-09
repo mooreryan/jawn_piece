@@ -192,18 +192,22 @@ int iupac_match(char c1, char c2)
   }
 }
 
+/* TODO doesn't ensure strings are the same length */
 double perc_mismatch(char *str1, char *str2)
 {
   int num_mismatches = 0;
   int i = 0;
+  int posns_not_counted = 0;
 
   for (i = 0; str1[i] != '\0'; i++) {
-    if (iupac_match(str1[i], str2[i]) == 0) {
+    if (str1[i] == '.' || str2[i] == '.') {
+      posns_not_counted += 1;
+    } else if (iupac_match(str1[i], str2[i]) == 0) {
       num_mismatches += 1;
     }
   }
 
-  return num_mismatches / (double) i * 100;
+  return num_mismatches / (double) (i - posns_not_counted) * 100;
 }
 
 int num_windows(char *str)
