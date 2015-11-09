@@ -98,6 +98,8 @@ Ryan.try_mkdir(opts[:outdir])
 
 # use this in place of opts[:alignment]
 queries_no_chimeras = File.join opts[:outdir], "queries_no_chimeras.fa"
+queries_no_chimeras_full = File.join opts[:outdir], "queries_no_chimeras.full_length.fa"
+queries_no_chimeras_partial = File.join opts[:outdir], "queries_no_chimeras.partial_length.fa"
 
 masked_seqs = File.join opts[:outdir], "masked_alignment.fa"
 degapped_seqs = File.join opts[:outdir], "degapped_alignment.fa"
@@ -126,6 +128,7 @@ end
 # external scripts
 pintail = File.join this_dir, "pintail_2.rb"
 generate_report = File.join this_dir, "generate_html_report.rb"
+separate_partial_seqs = File.join this_dir, "remove_partial_seqs.rb"
 
 Ryan.try_mkdir dotur_outdir
 
@@ -171,8 +174,6 @@ def dot_to_dash seq
 end
 
 Ryan.time_it("Remove chimeras") do
-  # note, if there are no chimera flagged seqs, then
-  # queries_no_chimeras and opts[:alignment] will be the same
   File.open(queries_no_chimeras, "w") do |f|
     FastaFile.open(opts[:alignment]).each_record do |head, seq|
       unless flagged_seqs.include? head
@@ -180,6 +181,13 @@ Ryan.time_it("Remove chimeras") do
       end
     end
   end
+end
+
+Ryan.time_it("Separate full and partial seqs") do
+  cmd = "ruby #{separate_partial_seqs} " +
+        "--input #{queries_no_chimeras} " +
+        "--outdir #{opts[:outdir]}"
+  Ryan.run_it cmd
 end
 
 Ryan.time_it("Get database OTU metadata info") do
@@ -243,13 +251,13 @@ end
 
 Ryan.time_it("Update gap posns from user seqs & trim mask") do
   # first run through the sequences to adjust the mask
-  FastaFile.open(queries_no_chimeras).each_record do |head, seq|
+  FastaFile.open(queries_no_chimeras_full).each_record do |head, seq|
     unless seq.length == SILVA_ALN_LEN
-      warn "ERROR: #{head} in #{queries_no_chimeras} is #{seq.length} bases, should be #{SILVA_ALN_LEN}"
+      warn "ERROR: #{head} in #{queries_no_chimeras_full} is #{seq.length} bases, should be #{SILVA_ALN_LEN}"
     end
 
     if user_provided_headers.include? head
-      abort "ERROR: #{head} duplicated in #{queries_no_chimeras}"
+      abort "ERROR: #{head} duplicated in #{queries_no_chimeras_full}"
     end
 
     user_provided_headers << head
@@ -279,7 +287,7 @@ end
 Ryan.time_it("Apply mask to seqs & write") do
   # apply the mask, figure out gaps
   File.open(masked_seqs, "w") do |f|
-    FastaFile.open(queries_no_chimeras).each_record do |head, seq|
+    FastaFile.open(queries_no_chimeras_full).each_record do |head, seq|
       masked_seq = mask_posns.map { |i| seq[i] }.join("").gsub(/U/, "T").gsub(/u/, "t")
 
       f.printf ">%s\n%s\n", head, masked_seq
@@ -298,7 +306,7 @@ Ryan.time_it("Write degapped alignment") do
   shared_gap_posns = gap_posns.reduce(:&)
 
   File.open(degapped_seqs, "w") do |f|
-    FastaFile.open(queries_no_chimeras).each_record do |head, seq|
+    FastaFile.open(queries_no_chimeras_full).each_record do |head, seq|
       seq = seq.gsub(/U/, "T").gsub(/u/, "t")
 
       f.printf ">%s\n", head
