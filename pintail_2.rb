@@ -25,6 +25,8 @@ opts = Trollop.options do
       default: File.join("test_files", "pintail.test.fa"))
   opt(:outdir, "Output directory", type: :string,
       default: "output")
+  opt(:graph, "Output pintail graphs", type: :boolean,
+      default: false)
 end
 
 queries = Ryan.check_file(opts[:queries], :queries)
@@ -33,10 +35,10 @@ Ryan.try_mkdir(opts[:outdir])
 OUTPUT_FOLDER = opts[:outdir]
 PINTAIL_FOLDER = File.join OUTPUT_FOLDER, "pintail"
 PINTAIL_GRAPHS_FOLDER = File.join PINTAIL_FOLDER, "graphs"
-PINTAIL_GRAPHS_LOW_FOLDER = File.join PINTAIL_GRAPHS_FOLDER, "too_low"
+# PINTAIL_GRAPHS_LOW_FOLDER = File.join PINTAIL_GRAPHS_FOLDER, "too_low"
 PINTAIL_GRAPHS_HIGH_FOLDER = File.join PINTAIL_GRAPHS_FOLDER, "too_high"
 
-Ryan.try_mkdir PINTAIL_GRAPHS_LOW_FOLDER
+# Ryan.try_mkdir PINTAIL_GRAPHS_LOW_FOLDER
 Ryan.try_mkdir PINTAIL_GRAPHS_HIGH_FOLDER
 
 
@@ -80,14 +82,12 @@ positional_variability = get_positional_variability masked_db_seqs
 windowed_avg_probs = get_windowed_avg_probs positional_variability
 database_overall_evol_dist = mean(windowed_avg_probs.map(&:last))
 
-too_low_f =
-  File.open(File.join(PINTAIL_FOLDER, "pintail.too_low.txt"), "w")
 too_high_f =
   File.open(File.join(PINTAIL_FOLDER, "pintail.too_high.txt"), "w")
 just_right_f =
   File.open(File.join(PINTAIL_FOLDER, "pintail.just_right.txt"), "w")
 
-[too_low_f, too_high_f, just_right_f].each do |f|
+[too_high_f, just_right_f].each do |f|
   f.puts %w[query.name query.seq subject.name subject.seq dist de de.99th flag].
           join "\t"
 end
@@ -110,6 +110,7 @@ queries.each_with_index do |(query_name, query), qi|
 
     de = get_de(obs_perc_diffs, exp_perc_diffs)
 
+    # TODO read this into memory once
     pgroup = count = dist = p5 = nil
     File.open(Const::DE_DIST_PERCENTILES).each_line do |line|
       unless line.start_with? "dist"
@@ -121,34 +122,6 @@ queries.each_with_index do |(query_name, query), qi|
       end
     end
 
-    # if de < lower.to_f
-    #   flag = "too_low"
-    #   flagged_queries << query_name
-    #   too_low_f.puts [query_name,
-    #                   query,
-    #                   subj_name,
-    #                   subj,
-    #                   "%.3f" % obs_evol_dist,
-    #                   "%.3f" % de,
-    #                   lower,
-    #                   upper,
-    #                   flag].join "\t"
-    #   warn "WARNING: #{query_name} - #{subj_name} pair flagged too low"
-    #   plot_diffs exp_perc_diffs, obs_perc_diffs, :too_low, query_name, subj_name
-    # elsif de > upper.to_f
-    #   flag = "too_high"
-    #   flagged_queries << query_name
-    #   too_high_f.puts [query_name,
-    #                    query,
-    #                    subj_name,
-    #                    subj,
-    #                    "%.3f" % obs_evol_dist,
-    #                    "%.3f" % de,
-    #                    lower,
-    #                    upper,
-    #                    flag].join "\t"
-    #   plot_diffs exp_perc_diffs, obs_perc_diffs, :too_high, query_name, subj_name
-  #   warn "WARNING: #{query_name} - #{subj_name} pair flagged too high"
     if de > p5.to_f
       flag = "too_high"
       flagged_queries << query_name
@@ -160,7 +133,10 @@ queries.each_with_index do |(query_name, query), qi|
                        "%.3f" % de,
                        p5,
                        flag].join "\t"
-      plot_diffs exp_perc_diffs, obs_perc_diffs, :too_high, query_name, subj_name
+      if opts[:graph]
+        plot_diffs exp_perc_diffs, obs_perc_diffs, :too_high, query_name, subj_name
+      end
+
       warn "WARNING: #{query_name} - #{subj_name} pair flagged too high"
     else
       flag = "just_right"
@@ -183,7 +159,6 @@ end
 $stderr.puts
 
 # TODO ensure these close
-too_low_f.close
 too_high_f.close
 just_right_f.close
 

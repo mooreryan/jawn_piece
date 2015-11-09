@@ -77,11 +77,15 @@ opts = Trollop.options do
       default: "test_files/zetas_aligned.fasta")
   opt(:database, "MSA database",
       type: :string,
-      default: "test_files/database.fa")
+      default: File.join(File.dirname(__FILE__),
+                         "assets",
+                         "database.fa"))
   opt(:db_otu_info,
       "Accession to OTU info for the database",
       type: :string,
-      default: "test_files/otus.txt")
+      default: File.join(File.dirname(__FILE__),
+                         "assets",
+                         "otus.txt"))
   opt(:outdir,
       "Output directory",
       type: :string,
@@ -113,8 +117,15 @@ de_novo_dist = File.join opts[:outdir], "de_novo.dist"
 de_novo_otu_calls = File.join opts[:outdir], "de_novo_otu_calls.txt"
 final_otu_calls = File.join opts[:outdir], "final_otu_calls.txt"
 
+# remove phylip outfile if it exists
+if File.exists? phylip_outfile
+  warn "Removing #{phylip_outfile}"
+  Ryan.run_it "rm #{phylip_outfile}"
+end
+
 # external scripts
 pintail = File.join this_dir, "pintail_2.rb"
+generate_report = File.join this_dir, "generate_html_report.rb"
 
 Ryan.try_mkdir dotur_outdir
 
@@ -155,13 +166,17 @@ Ryan.time_it("Check for chimeras") do
   end
 end
 
+def dot_to_dash seq
+  seq.gsub ".", "-"
+end
+
 Ryan.time_it("Remove chimeras") do
   # note, if there are no chimera flagged seqs, then
   # queries_no_chimeras and opts[:alignment] will be the same
   File.open(queries_no_chimeras, "w") do |f|
     FastaFile.open(opts[:alignment]).each_record do |head, seq|
       unless flagged_seqs.include? head
-        f.printf ">%s\n%s\n", head, seq
+        f.printf ">%s\n%s\n", head, dot_to_dash(seq)
       end
     end
   end
@@ -353,6 +368,9 @@ Ryan.time_it("Write the DNAdist params file") do
 end
 
 Ryan.time_it("DNAdist") do
+  #TODO this will die if infile/outfile is names is messed up TODO
+  #phylip errors are weird and Ryan.run_it doesn't realize its an
+  #error
   Ryan.run_it "#{dnadist} < #{phylip_infile}"
   Ryan.run_it "mv #{phylip_outfile} #{masked_dist}"
 end
@@ -576,6 +594,11 @@ Ryan.time_it("Write final OTU calls") do
       f.puts [query, otu].join "\t"
     end
   end
+end
+
+Ryan.time_it("Generate HTML report") do
+  cmd = "ruby #{generate_report} --directory #{opts[:outdir]}"
+  Ryan.run_it cmd
 end
 
 # Ryan.time_it("10 Assign OTU numbers to OTU groups from the " +
