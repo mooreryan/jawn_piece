@@ -16,7 +16,16 @@ opts = Trollop.options do
   banner <<-EOS
 
   Pintail! Take all the input sequences and run them one by one
-  against each of the 85 sequences in the database.
+  against each of the non-outgroup sequences in the database.
+
+  For partial sequences, ignores any posistion with a ".".
+
+  Currently, the calculated DE values are only for window size 300, so
+  ignore any partial seq with less than 600 non "." posns. For now,
+  these will be included in the flagged queries and ignored
+  downstream.
+
+  TODO: only check the sequence with highest similarity?
 
   Options:
   EOS
@@ -37,10 +46,12 @@ PINTAIL_FOLDER = File.join OUTPUT_FOLDER, "pintail"
 PINTAIL_GRAPHS_FOLDER = File.join PINTAIL_FOLDER, "graphs"
 # PINTAIL_GRAPHS_LOW_FOLDER = File.join PINTAIL_GRAPHS_FOLDER, "too_low"
 PINTAIL_GRAPHS_HIGH_FOLDER = File.join PINTAIL_GRAPHS_FOLDER, "too_high"
+NOT_CHECKED = File.join PINTAIL_FOLDER, "seqs_not_checked.txt"
 
 # Ryan.try_mkdir PINTAIL_GRAPHS_LOW_FOLDER
 Ryan.try_mkdir PINTAIL_GRAPHS_HIGH_FOLDER
 
+LEN_CUTOFF = 600
 
 mask_posns = []
 masked_db_seqs = [] # from the database
@@ -52,6 +63,8 @@ masked_db_seq_names = []
 queries = {}
 flagged_queries = Set.new
 
+
+
 # get just the masked bases
 FastaFile.open(Const::DATABASE).each_record do |head, seq|
   check_len seq
@@ -59,7 +72,8 @@ FastaFile.open(Const::DATABASE).each_record do |head, seq|
 
   if head == "Mask"
     mask_posns = get_mask_posns seq
-  elsif !seq.match(/[^-actgACTG]/) # ignore seqs with ambiguous bases
+  # skip outgroups and ignore seqs with ambiguous bases
+  elsif !head.match("outgroup") && !seq.match(/[^-actgACTG]/)
     masked_db_seqs << mask_seq(mask_posns, u_to_t(seq))
     masked_db_seq_names << head
   end
@@ -67,13 +81,23 @@ FastaFile.open(Const::DATABASE).each_record do |head, seq|
   seq_num += 1
 end
 
-# the infile contains all the queries, assumes they are all full
-# length
-FastaFile.open(opts[:queries]).each_record do |head, seq|
-  if queries.has_key? head
-    abort "#{head} is repeated in #{opts[:queires]}"
-  else
-    queries[head] = mask_seq(mask_posns, u_to_t(seq))
+File.open(NOT_CHECKED, "w") do |f|
+  # the infile contains all the queries, assumes they are all full
+  # length
+  FastaFile.open(opts[:queries]).each_record do |head, seq|
+    if queries.has_key? head
+      abort "#{head} is repeated in #{opts[:queires]}"
+    end
+
+    masked_seq = mask_seq(mask_posns, u_to_t(seq))
+    len_no_dots = masked_seq.gsub(".", "").length
+
+    if len_no_dots >= LEN_CUTOFF
+      queries[head] = masked_seq
+    else
+      flagged_queries << head
+      f.puts [head, len_no_dots].join "\t"
+    end
   end
 end
 
