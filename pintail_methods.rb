@@ -139,7 +139,7 @@ o.ys <- c(#{o_ys})
 
 max.y <- ifelse(max(o.ys) >= max(e.ys), max(o.ys), max(e.ys))
 
-plot(ylim = c(0, 50), #c(0, max.y),
+plot(ylim = c(0, 100), #c(0, max.y),
      x = e.xs,
      y = e.ys,
      col = "gray48",
