@@ -83,3 +83,26 @@ FJ905673	25	AV19F clone 106b	1
 FJ535293	26	Kermadec Arc clone CF-30	1
 FJ535342	27	Kermadec Arc clone TS-20	1
 FJ497401	28	Vailulu'u Seamount clone VS_CL-152	1
+Thiomicroh outgroup	OG	OG	OG
+Geobacterh outgroup	OG	OG	OG
+Thermotoga outgroup	OG	OG	OG
+Marinobact outgroup	OG	OG	OG
+Thiothrixe outgroup	OG	OG	OG
+Thiothrixd outgroup	OG	OG	OG
+Thiomicrop outgroup	OG	OG	OG
+Sulfurimon outgroup	OG	OG	OG
+Sulfurovum outgroup	OG	OG	OG
+Nitratirup outgroup	OG	OG	OG
+Desulfobul outgroup	OG	OG	OG
+Geobacterp outgroup	OG	OG	OG
+Nitrospina outgroup	OG	OG	OG
+Desurellaa outgroup	OG	OG	OG
+Desurellap outgroup	OG	OG	OG
+Leptothrsp outgroup	OG	OG	OG
+Gallionesp outgroup	OG	OG	OG
+Gallionefe outgroup	OG	OG	OG
+Leptothrdi outgroup	OG	OG	OG
+Rhodobacte outgroup	OG	OG	OG
+Hyphomonas outgroup	OG	OG	OG
+Roseobacte outgroup	OG	OG	OG
+Aquifexpyr outgroup	OG	OG	OG
