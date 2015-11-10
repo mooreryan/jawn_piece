@@ -103,6 +103,7 @@ queries_no_chimeras_partial = File.join opts[:outdir], "queries_no_chimeras.part
 
 masked_seqs = File.join opts[:outdir], "masked_alignment.fa"
 degapped_seqs = File.join opts[:outdir], "degapped_alignment.fa"
+degapped_mask = File.join opts[:outdir], "degapped_mask.fa"
 masked_for_phylip = File.join opts[:outdir], "masked_for_phylip.fa"
 for_phylip_map = File.join opts[:outdir], "for_phylip_map.txt"
 phylip_infile = File.join opts[:outdir], "DNAdist_params.txt"
@@ -355,9 +356,19 @@ Ryan.time_it("Get entropy for masked seqs") do
   end
 end
 
-Ryan.time_it("Write degapped alignment") do
+Ryan.time_it("Write degapped alignment & mask") do
 
   shared_gap_posns = gap_posns.reduce(:&)
+
+  File.open(degapped_mask, "w") do |f|
+    FastaFile.open(Const::MASK).each_record do |head, seq|
+      f.printf ">%s\n", head
+      seq.each_char.with_index do |c, i|
+        f.print c unless shared_gap_posns.include? i
+      end
+      f.print "\n"
+    end
+  end
 
   File.open(degapped_seqs, "w") do |f|
     FastaFile.open(queries_no_chimeras).each_record do |head, seq|
@@ -624,9 +635,13 @@ Ryan.time_it("Report de novo OTU calls") do
     f.puts %w[query otu seq.perc.entropy otu.group.shared.entropy].join "\t"
     otu_calls_info[which_cutoff].each_with_index do |otu_group, otu_num|
 
+      # TODO works for test_files/small/full_and_part.fa, but not for
+      # test_files/all/arb-w-basal-bad.fa
       group_shared_entropy = otu_group.map do |seq_name|
+        assert query_entropy[seq_name]
         query_entropy[seq_name][:non_zero_posns] # a set of non zero posns
       end.reduce(&:intersection).map do |shared_non_zero_posn|
+        assert entropy[shared_non_zero_posn]
         entropy[shared_non_zero_posn] # the entropy at that posn
       end.reduce(:+) / total_entropy.to_f * 100
 
