@@ -1,3 +1,6 @@
+#define WINDOW_SIZE 300
+#define WINDOW_STEP 25
+
 int iupac_match(char c1, char c2);
 double perc_mismatch(char *str1, char *str2);
 

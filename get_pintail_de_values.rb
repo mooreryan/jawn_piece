@@ -23,7 +23,9 @@ opts = Trollop.options do
   opt(:threads, "Number of threads", type: :int, default: 3)
   opt(:database, "Database", type: :string,
       default: Const::DATABASE)
-  opt(:force, "Force overwrite of the database_DE_dist.txt file",
+  opt(:outf, "Outfile", type: :string,
+      default: Const::DE_DIST)
+  opt(:force, "Force overwrite of the outf",
       default: true)
 end
 
@@ -31,10 +33,10 @@ if opts[:threads] < 1
   abort "ERROR: --threads must be >= 1"
 end
 
-if File.exists?(Const::DE_DIST) && !opts[:force]
-  abort "ERROR: File: #{Const::DE_DIST} already exists!"
-elsif File.exists?(Const::DE_DIST)
-  warn "WARNING: Overwriting #{Const::DE_DIST}!"
+if File.exists?(opts[:outf]) && !opts[:force]
+  abort "ERROR: File: #{opts[:outf]} already exists!"
+elsif File.exists?(opts[:outf])
+  warn "WARNING: Overwriting #{opts[:outf]}!"
 end
 
 Ryan.log "Using database: #{opts[:database]}"
@@ -42,7 +44,7 @@ mask = get_mask_info opts[:database]
 
 de_values = get_DE_dist mask, opts[:threads]
 
-File.open(Const::DE_DIST, "w") do |f|
+File.open(opts[:outf], "w") do |f|
   # f.puts %w[query subj dist de].join "\t"
   f.puts de_values.count
 

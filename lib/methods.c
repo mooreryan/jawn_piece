@@ -8,9 +8,6 @@
 
 #include "methods.h"
 
-#define WINDOW_SIZE 300
-#define WINDOW_STEP 25
-
 double get_de(double *observed, double *expected, int len)
 {
   int i = 0;
