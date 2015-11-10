@@ -635,15 +635,19 @@ Ryan.time_it("Report de novo OTU calls") do
     f.puts %w[query otu seq.perc.entropy otu.group.shared.entropy].join "\t"
     otu_calls_info[which_cutoff].each_with_index do |otu_group, otu_num|
 
-      # TODO works for test_files/small/full_and_part.fa, but not for
-      # test_files/all/arb-w-basal-bad.fa
-      group_shared_entropy = otu_group.map do |seq_name|
+      intersection = otu_group.map do |seq_name|
         assert query_entropy[seq_name]
         query_entropy[seq_name][:non_zero_posns] # a set of non zero posns
-      end.reduce(&:intersection).map do |shared_non_zero_posn|
-        assert entropy[shared_non_zero_posn]
-        entropy[shared_non_zero_posn] # the entropy at that posn
-      end.reduce(:+) / total_entropy.to_f * 100
+      end.reduce(&:intersection)
+
+      if intersection.empty?
+        group_shared_entropy = 0.0
+      else
+        group_shared_entropy = intersection.map do |shared_non_zero_posn|
+          assert entropy[shared_non_zero_posn]
+          entropy[shared_non_zero_posn] # the entropy at that posn
+        end.reduce(:+) / total_entropy.to_f * 100
+      end
 
       otu_group.each do |name|
         assert query_entropy[name]
