@@ -18,6 +18,7 @@ double get_de(double *observed, double *expected, int len)
     total += pow(subt, 2);
   }
 
+  assert(len != 0);
   return sqrt(total / len);
 }
 
@@ -194,17 +195,25 @@ double perc_mismatch(char *str1, char *str2)
 {
   int num_mismatches = 0;
   int i = 0;
-  int posns_not_counted = 0;
+  /* int posns_not_counted = 0; */
 
   for (i = 0; str1[i] != '\0'; i++) {
-    if (str1[i] == '.' || str2[i] == '.') {
-      posns_not_counted += 1;
-    } else if (iupac_match(str1[i], str2[i]) == 0) {
+    /* if they both have nothing in that position, then that would
+       match */
+    /* if (str1[i] == '.' || str2[i] == '.') { */
+    /*   posns_not_counted += 1; */
+    /* } else if (iupac_match(str1[i], str2[i]) == 0) { */
+    /*   num_mismatches += 1; */
+    /* } */
+
+    if (iupac_match(str1[i], str2[i]) == 0) {
       num_mismatches += 1;
     }
   }
 
-  return num_mismatches / (double) (i - posns_not_counted) * 100;
+  /* return num_mismatches / (double) (i - posns_not_counted) * 100; */
+  assert(i != 0);
+  return num_mismatches / (double) i * 100;
 }
 
 int num_windows(char *str)
@@ -213,11 +222,13 @@ int num_windows(char *str)
 
   for (i = 0; str[i] != '\0'; i++) { ; }
 
+  assert(WINDOW_STEP != 0);
   return (int) ceil((i - WINDOW_SIZE + 1) / (double) WINDOW_STEP);
 }
 
 int get_num_windows(int window_size, int window_step, int arr_len)
 {
+  assert(WINDOW_STEP != 0);
   return (int) ceil((arr_len - window_size + 1) / (double) window_step);
 }
 
@@ -493,6 +504,7 @@ double arr_mean(double *arr, int len)
     total += arr[i];
   }
 
+  assert(len != 0);
   return total / len;
 }
 

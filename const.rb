@@ -37,12 +37,12 @@ Ryan.try_mkdir Const::ASSETS_FOLDER
 
 # check that the window size here matches that in the c headers
 clibh = File.open(Const::CLIBH).read
-unless clibh.match(/WINDOW_SIZE #{Const::WINDOW_SIZE}/)
+unless clibh.include?("WINDOW_SIZE #{Const::WINDOW_SIZE}")
   abort "ERROR: WINDOW_SIZE in const.rb and lib/methods.h don't " +
         "match.\nAny changes require re-compiling."
 end
 
-unless clibh.match(/WINDOW_STEP #{Const::WINDOW_STEP}/)
+unless clibh.include?("WINDOW_STEP #{Const::WINDOW_STEP}")
   abort "ERROR: WINDOW_STEP in const.rb and lib/methods.h don't " +
         "match.\nAny changes require re-compiling."
 end
