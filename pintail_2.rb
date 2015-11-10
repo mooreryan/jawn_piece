@@ -51,7 +51,7 @@ NOT_CHECKED = File.join PINTAIL_FOLDER, "seqs_not_checked.txt"
 # Ryan.try_mkdir PINTAIL_GRAPHS_LOW_FOLDER
 Ryan.try_mkdir PINTAIL_GRAPHS_HIGH_FOLDER
 
-LEN_CUTOFF = 600
+LEN_CUTOFF = Const::WINDOW_SIZE * 2
 
 mask_posns = []
 masked_db_seqs = [] # from the database
@@ -62,8 +62,6 @@ n = 0
 masked_db_seq_names = []
 queries = {}
 flagged_queries = Set.new
-
-
 
 # get just the masked bases
 FastaFile.open(Const::DATABASE).each_record do |head, seq|

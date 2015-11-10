@@ -137,6 +137,7 @@ OTU_LEVEL = 0.03
 
 mask = ""
 mask_posns = []
+partial_mask_posns = []
 n = 0
 database = {}
 gap_posns = []
@@ -249,6 +250,11 @@ Ryan.time_it("Read the database for gaps and mask") do
   end
 end
 
+
+
+# TODO we trim the mask even for full sequences since the partial seqs
+# script counts everything that has less than five bases missing from
+# each end
 Ryan.time_it("Update gap posns from user seqs & trim mask") do
   # first run through the sequences to adjust the mask
   FastaFile.open(queries_no_chimeras_full).each_record do |head, seq|
@@ -269,8 +275,8 @@ Ryan.time_it("Update gap posns from user seqs & trim mask") do
 
     gap_posns << these_gap_posns
 
-    first_seq_posn = seq.index /[^-]/
-    last_seq_posn = seq.length - seq.reverse.index(/[^-]/) - 1
+    first_seq_posn = seq.index /[^-\.]/
+    last_seq_posn = seq.length - seq.reverse.index(/[^-\.]/) - 1
 
     while first_seq_posn > mask_posns.first
       # the sequence starts after the first mask posn
@@ -283,6 +289,8 @@ Ryan.time_it("Update gap posns from user seqs & trim mask") do
     end
   end
 end
+
+
 
 Ryan.time_it("Apply mask to seqs & write") do
   # apply the mask, figure out gaps

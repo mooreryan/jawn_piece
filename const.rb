@@ -2,9 +2,15 @@ module Const
   WINDOW_SIZE = 300
   WINDOW_STEP = 25
 
+  OTU_CUTOFF = 0.03
+
   SILVA_LEN = 50000
 
   ASSETS_FOLDER = File.join File.dirname(__FILE__), "assets"
+
+  ENTROPY = File.join ASSETS_FOLDER, "entropy.db_no_outgroups.txt"
+
+  HV_REGIONS = File.join ASSETS_FOLDER, "hv_regions.txt"
 
   DATABASE = File.join ASSETS_FOLDER, "database.fa"
 
