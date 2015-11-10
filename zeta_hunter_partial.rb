@@ -330,8 +330,10 @@ Ryan.time_it("Apply mask to seqs & write") do
 end
 
 def get_seq_entropy entropy, seq
+  non_zero_posns = Set.new
   seq_entropy = seq.each_char.map.with_index do |char, idx|
     if char.match(/[^-\.]/)
+      non_zero_posns << idx
       entropy[idx]
     else
       0
@@ -341,7 +343,9 @@ def get_seq_entropy entropy, seq
   assert seq_entropy.count == 1282
 
   total_entropy = entropy.reduce(:+).to_f
-  (seq_entropy.reduce(:+) / total_entropy * 100).round(3)
+
+  { entropy: (seq_entropy.reduce(:+) / total_entropy * 100).round(3),
+    non_zero_posns: non_zero_posns }
 end
 
 
@@ -487,7 +491,7 @@ Ryan.time_it("Closed reference OTU assignment") do
                 dists.min,
                 dists.max,
                 mean(dists),
-                query_entropy[query_seq_name]].join "\t"
+                query_entropy[query_seq_name][:entropy]].join "\t"
 
       end
     end
@@ -523,7 +527,7 @@ Ryan.time_it("Closed reference OTU assignment") do
       assert query_entropy[query_seq_name]
       f.puts [query_seq_name,
               otu,
-              query_entropy[query_seq_name]].join "\t"
+              query_entropy[query_seq_name][:entropy]].join "\t"
     end
   end
 end
@@ -617,14 +621,22 @@ end
 
 Ryan.time_it("Report de novo OTU calls") do
   File.open(de_novo_otu_calls, "w") do |f|
-    f.puts %w[query otu perc.entropy].join "\t"
+    f.puts %w[query otu seq.perc.entropy otu.group.shared.entropy].join "\t"
     otu_calls_info[which_cutoff].each_with_index do |otu_group, otu_num|
+
+      group_shared_entropy = otu_group.map do |seq_name|
+        query_entropy[seq_name][:non_zero_posns] # a set of non zero posns
+      end.reduce(&:intersection).map do |shared_non_zero_posn|
+        entropy[shared_non_zero_posn] # the entropy at that posn
+      end.reduce(:+) / total_entropy.to_f * 100
+
       otu_group.each do |name|
         assert query_entropy[name]
-        f.printf "%s\tnew.otu.%d\t%s\n",
+        f.printf "%s\tnew.otu.%d\t%s\t%s\n",
                  name,
                  otu_num + 1,
-                 query_entropy[name]
+                 query_entropy[name][:entropy],
+                 group_shared_entropy.round(3)
       end
     end
   end
@@ -640,24 +652,24 @@ Ryan.time_it("Write final OTU calls") do
         if queries.has_key? query
           abort "ERROR: #{query} is repeated"
         else
-          queries[query] = [otu, pent]
+          queries[query] = [otu, pent, "NA"]
         end
       end
     end
 
     File.open(de_novo_otu_calls).each_line do |line|
       unless line.start_with? "query"
-        query, otu, pent = line.chomp.split "\t"
+        query, otu, pent, group_ent = line.chomp.split "\t"
 
         if queries.has_key? query
           abort "ERROR: #{query} is repeated"
         else
-          queries[query] = [otu, pent]
+          queries[query] = [otu, pent, group_ent]
         end
       end
     end
 
-    f.puts %w[query otu perc.entropy].join "\t"
+    f.puts %w[query otu perc.entropy group.ent].join "\t"
     queries.each do |query, otu|
       f.puts [query, otu].flatten.join "\t"
     end
