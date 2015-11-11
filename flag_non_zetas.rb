@@ -4,8 +4,8 @@ require "fail_fast"
 
 include FailFast::Assertions
 
-infile = "/Users/moorer/projects/ZetaHunter/output/small/trees/masked_for_phylip.tre"
-phymap = "/Users/moorer/projects/ZetaHunter/output/small/for_phylip_map.txt"
+infile = ARGV[0]
+phymap = ARGV[1]
 
 treeio = Bio::FlatFile.open(Bio::Newick, infile)
 
@@ -17,13 +17,34 @@ m1 = "o"
 m2 = "j"
 m3 = "d"
 
-ALL = ("a" .. "dw").to_a
-db_start = ALL.index("u")
-outgroups_start = ALL.index("da")
+name_map = {}
+queries = []
+database = []
+outgroups = []
+all = []
+File.open(phymap).each_line do |line|
+  new_name, old_name, type = line.chomp.split "\t"
 
-QUERIES   = ALL[0 .. db_start-1]
-DATABASE  = ALL[db_start .. outgroups_start - 1]
-OUTGROUPS = ALL[outgroups_start .. ALL.length-1]
+  name_map[new_name] = old_name
+
+  if type == "query"
+    queries << new_name
+  elsif type == "outgroup"
+    outgroups << new_name
+  elsif type == "database"
+    database << new_name
+  else
+    abort "ERROR: malformed type, was #{type}"
+  end
+
+  all << new_name
+end
+
+ALL = all
+
+QUERIES   = queries
+DATABASE  = database
+OUTGROUPS = outgroups
 
 # TODO if node name is nil <- does that work?
 def leaf? node
@@ -77,5 +98,8 @@ all_dists.group_by { |name, name2, dist| name }.each do |key, arr|
 end
 
 outgroups_in_closest_ten.each do |name|
-  puts name
+  unless OUTGROUPS.include? name
+    assert name_map[name]
+    puts name_map[name]
+  end
 end

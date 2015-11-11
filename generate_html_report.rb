@@ -112,6 +112,8 @@ closed_ref_otu_info_f =
   File.join opts[:directory], "closed_ref_otu_info.txt"
 final_calls_f =
   File.join opts[:directory], "final_otu_calls.txt"
+possible_non_zetas_f =
+  File.join opts[:directory], "possible_non_zetas.txt"
 seanie_f =
   File.join File.dirname(__FILE__), "assets", "seanie.html"
 
@@ -120,12 +122,18 @@ check_f degapped_alignment_f
 check_f otu_calls_f
 check_f closed_ref_otu_info_f
 check_f final_calls_f
+check_f possible_non_zetas_f
 check_f seanie_f
 
 degapped_seqs = FastaFile.open(degapped_alignment_f).to_hash
 otu_info = {}
 
 html_f = File.join opts[:directory], "run_info.html"
+
+possible_non_zetas = []
+File.open(possible_non_zetas_f).each_line do |line|
+  possible_non_zetas << line.chomp
+end
 
 File.open(otu_calls_f).each_line do |line|
   unless line.start_with? "query"
@@ -285,6 +293,9 @@ html = %Q{<!DOCTYPE html>
     <div class="container" id="degapped-alignment">
 #{degapped_seqs_html_string}
     </div>
+
+    <h2>Possible non-Zetas</h2>
+#{possible_non_zetas.map { |n| "<p>#{n}" }.join("\n")}
 
     <h2>Closed reference OTU info</h2>
     <div id="closed-ref-otu-info">

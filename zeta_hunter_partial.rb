@@ -119,6 +119,11 @@ closed_ref_otu_calls = File.join opts[:outdir], "closed_ref_otu_calls.txt"
 de_novo_dist = File.join opts[:outdir], "de_novo.dist"
 de_novo_otu_calls = File.join opts[:outdir], "de_novo_otu_calls.txt"
 final_otu_calls = File.join opts[:outdir], "final_otu_calls.txt"
+tree = File.join opts[:outdir], "fasttree.tre"
+tree_nex = File.join opts[:outdir], "fasttree.nex"
+possible_non_zetas = File.join opts[:outdir], "possible_non_zetas.txt"
+color_tree_name_map = File.join opts[:outdir], "color_tree_name_map.txt"
+color_tree_colors = File.join opts[:outdir], "color_tree_colors.txt"
 
 # remove phylip outfile if it exists
 if File.exists? phylip_outfile
@@ -130,6 +135,9 @@ end
 pintail = File.join this_dir, "pintail_2.rb"
 generate_report = File.join this_dir, "generate_html_report.rb"
 separate_partial_seqs = File.join this_dir, "remove_partial_seqs.rb"
+fasttree = File.join this_dir, "bin", "osx", "FastTree"
+flag_non_zetas = File.join this_dir, "flag_non_zetas.rb"
+color_tree = File.join this_dir, "bin", "color_tree"
 
 Ryan.try_mkdir dotur_outdir
 
@@ -146,6 +154,7 @@ db_otu_info = {}
 new_to_orig_name = {} # used to prevent names from being too long for phylip
 otu_calls_info = {}
 user_provided_headers = Set.new
+outgroups = Set.new
 which_cutoff = -1
 which_dotur_otu_group = {}
 otu_group_actual_otus = {}
@@ -157,6 +166,12 @@ flagged_seqs = Set.new
 entropy = []
 total_entropy = 0
 query_entropy = {}
+
+Ryan.time_it("Read outgroups") do
+  File.open(Const::OUTGROUPS).each_line do |line|
+    outgroups << line.chomp
+  end
+end
 
 Ryan.time_it("Read entropy info") do
   # TODO if file doesn't exist, create it
@@ -419,7 +434,20 @@ Ryan.time_it("Make masked_for_phylip.fa") do
 
       new_name = "a"
       FastaFile.open(masked_seqs).each_record do |head, seq|
-        phy_map.puts [new_name, head].join "\t"
+        if user_provided_headers.include? head
+          type = "query"
+          col = "blue"
+        elsif outgroups.include? head
+          type = "outgroup"
+          col = "red"
+        elsif (database.keys - outgroups.to_a).include? head
+          type = "database"
+          col = "green"
+        else
+          abort "ERROR: #{head} can't be grouped"
+        end
+
+        phy_map.puts [new_name, head, type, col].join "\t"
         new_to_orig_name[new_name] = head
 
         phy_aln.printf "%-10.10s%s\n", new_name, seq
@@ -428,6 +456,36 @@ Ryan.time_it("Make masked_for_phylip.fa") do
       end
     end
   end
+end
+
+Ryan.time_it("Build tree") do
+  cmd = "#{fasttree} -nt #{masked_for_phylip} > #{tree}"
+  Ryan.run_it cmd
+end
+
+Ryan.time_it("Color tree") do
+  Ryan.time_it("Make color_tree name map") do
+    File.open(color_tree_colors, "w") do |cf|
+      File.open(color_tree_name_map, "w") do |nmf|
+        File.open(for_phylip_map).each_line do |line|
+          new_name, old_name, type, col = line.chomp.split "\t"
+
+          nmf.puts [new_name, old_name].join "\t"
+
+          cf.puts [old_name, col].join "\t"
+        end
+      end
+    end
+  end
+  cmd = "#{color_tree} -bte -n #{color_tree_name_map} " +
+        "-p #{color_tree_colors} #{tree} > #{tree_nex}"
+  Ryan.run_it cmd
+end
+
+Ryan.time_it("Check for potentially bad sequences") do
+  cmd = "ruby #{flag_non_zetas} #{tree} #{for_phylip_map} " +
+        "> #{possible_non_zetas}"
+  Ryan.run_it cmd
 end
 
 Ryan.time_it("Write the DNAdist params file") do

@@ -10,6 +10,8 @@ module Const
 
   ASSETS_FOLDER = File.join File.dirname(__FILE__), "assets"
 
+  OUTGROUPS = File.join ASSETS_FOLDER, "outgroups.txt"
+
   ENTROPY = File.join ASSETS_FOLDER, "entropy.db_no_outgroups.txt"
 
   HV_REGIONS = File.join ASSETS_FOLDER, "hv_regions.txt"

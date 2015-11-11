@@ -1,0 +1,480 @@
+#!/usr/bin/env ruby
+
+# Copyright 2015 Ryan Moore
+# Contact: moorer@udel.edu
+#
+# color_tree is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# color_tree is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with color_tree.  If not, see
+# <http://www.gnu.org/licenses/>.
+
+Signal.trap("PIPE", "EXIT")
+
+require "bio"
+require "trollop"
+
+def hex? str
+  str.match(/^#[0-9A-Fa-f]{6}$/)
+end
+
+def check_file arg, which
+  help = "\nTry color_tree --help for help."
+  if arg.nil?
+    abort("Argument error: You must provide a #{which} file.#{help}")
+  elsif !File.exists?(arg)
+    abort("Argument error: The file #{arg} doesn't exist.#{help}")
+  else
+    arg
+  end
+end
+
+def clean name
+  name.gsub(/[-\/():,;\[\] ]+/, "_")
+end
+
+def duplicate_values? hash
+  values = hash.values
+  values.count != 1 && values.count != values.uniq.count
+end
+
+def parse_name_map fname
+  check_file fname, :name_map
+
+  name_map = {}
+  File.open(fname).each_line do |line|
+    oldname, newname = line.chomp.split( "\t").map { |name| clean name }
+
+    if name_map.has_key? oldname
+      abort("Name map error: #{oldname} is repeated in column 1")
+    else
+      name_map[oldname] = newname
+    end
+  end
+
+  if duplicate_values? name_map
+    p name_map.values
+    p name_map.values.count
+    p name_map.values.uniq.count
+    abort("Name map error: Names in column 2 must be unique")
+  end
+
+  name_map
+end
+
+def has_color name
+  name.match(/(.*)(\[&!color="#[0-9A-Fa-f]{6}"\])/)
+end
+
+def clean_name name
+  if name.nil?
+    nil
+  else
+    match = has_color name
+    if match
+      name = match[1]
+      color = match[2]
+
+      clean(name) + color
+    else
+      clean(name)
+    end
+  end
+end
+
+def leaf? tree, node
+  tree.children(node).empty?
+end
+
+def add_color_to_leaf_branch patterns, node, exact
+  num_matches = 0
+  color = nil
+
+  if exact # treat patterns as string matching
+    patterns.each do |pattern, this_color|
+      if node.to_s == pattern
+        num_matches += 1
+        color = this_color
+      end
+    end
+  else
+    patterns.each do |pattern, this_color|
+      if node.to_s.match(/#{pattern}/i)
+        num_matches += 1
+        color = this_color
+      end
+    end
+  end
+
+  if num_matches.zero?
+    nil
+  elsif num_matches == 1
+    color
+  else
+    abort("Error: non-specific pattern")
+  end
+end
+
+def already_checked? name
+  name.match(/\[&!color="#[0-9A-Fa-f]{6}"\]/)
+end
+
+def get_color node
+  begin
+    node.name.match(/\[&!color="#[0-9A-Fa-f]{6}"\]/)[0]
+  rescue NoMethodError => e
+    nil
+  end
+end
+
+def color_nodes patterns, tree, node, exact
+  # check if it needs color, if so set the color
+  color = add_color_to_leaf_branch patterns, node, exact
+
+  # clean the name no matter what
+  node.name = clean_name node.name
+
+  # if its a leaf that hasnt been checked & needs color
+  if leaf?(tree, node) && !already_checked?(node.name) && color
+    # add color to the name
+    node.name = node.name + color
+  # if it isn't a leaf
+  elsif !leaf?(tree, node)
+    children = tree.children(node) # get the children
+    children_colors = []
+    children.each do |child|
+      # recurse to color the child if needed
+      color_nodes patterns, tree, child, exact
+      children_colors << get_color(child) # add color of the child
+    end
+
+    # if all the children have the same color
+    if children_colors.uniq.count == 1
+      # set the branch node to only the color name
+      node.name = children_colors[0]
+    end
+  end
+
+  return node
+end
+
+opts = Trollop.options do
+  version "
+  # Version: 0.0.3
+  # Copyright 2015 Ryan Moore
+  # Contact: moorer@udel.edu
+  # License: GPLv3
+
+"
+  banner <<-EOS
+
+  # Version: 0.0.3
+  # Copyright 2015 Ryan Moore
+  # Contact: moorer@udel.edu
+  # License: GPLv3
+
+  Color branches and edit stuff. Outputs a nexus file for use in
+  FigTree.
+
+  Important: When importing into FigTree, when it asks you what to
+  name the branch labels, leave it as 'label'.
+
+  Occasionally FigTree will color things when you haven't specifically
+  asked it to do so. This is likely due to you having colored branches
+  or taxa names with similar rules in the same session. Regardless,
+  restart FigTree and try again.
+
+  Note: it might be a good idea to run the `clean_headers` script on
+  your alignment file before you make your tree.
+
+  Synopsis:
+
+color_tree [-bteh][-r min_bootstrap][-p pattern_f][-n name_map] newick_file
+
+  Dependencies:
+
+    Requires `trollop` and `bio`. Install them with
+
+      gem install trollop
+      gem install bio
+
+  Examples:
+
+    Remove all bootstrap values below 0.5:
+      color_tree -r 0.5 tree.newick > tree.nexus
+
+    Color branches according to patterns in patterns.txt:
+      color_tree -b tree.newick patterns.txt > tree.nexus
+
+    Color branches according to exact matches in patterns.txt
+      color_tree -be tree.newick patterns.txt > tree.nexus
+
+    Color branches and taxa names:
+      color_tree -bt tree.newick patterns.txt > tree.nexus
+
+    Color taxa names and remove boostrap values < 0.5:
+      color_tree -t -r 0.5 tree.newick patterns.txt > tree.nexus
+
+  Pattern file:
+
+    Tab delimited, two columns -> pattern, color
+
+      pattern: a regular expression pattern (case insensitive)
+
+      color: one of red, blue, green, yellow, black, or a hexadecimal
+      color code, e.g., #000000.
+
+      If a color other than red, blue, green, yellow, black or a hex
+      color code is specified, the value will be black.
+
+      If a name_map is provided, the patterns will search against the
+      new names (column 2) in the name_map, not the old_names (column
+      1).
+
+    Example:
+      _Bacteria	blue
+      [ds]sDNA virus	#0FF0FF
+      e.*coli	red
+
+    Exact matches:
+      If the `-e` flag is passed in the patterns in column 1 will be
+      searched against nodes as exact string matches. E.g., `bacteria`
+      would match `bacteria`, but not `Bacteria` or `proteobacteria`.
+
+
+  Name map:
+
+    Tab delimited, two columns -> old_name, new_name
+
+    Within each category, names must be unique.
+
+    If there are unsafe characters in the name, they will be cleaned
+    using the same rules as for cleaning the newick file.
+
+    Unlike the pattern_file, old_name is treating as a string and not
+    a regex, i.e., exact string matching is used.
+
+    Example:
+      1a	Silly apple phage
+      2a	Mariprofundus seanii
+
+  Options:
+  EOS
+
+  opt(:color_branches, "Color branches?", short: "-b")
+  opt(:color_taxa_names, "Color label names?", short: "-t")
+  opt(:exact, "Exact pattern matching")
+  opt(:remove_bootstraps_below,
+      "Remove bootstrap values below given value",
+      type: :float)
+  opt(:patterns, "Pattern file name", type: :string)
+  opt(:name_map, "File with name mappings", type: :string)
+end
+
+newick = check_file ARGV[0], :newick
+
+color_f = nil
+if opts[:color_taxa_names] || opts[:color_branches]
+  color_f = check_file opts[:patterns], :patterns
+elsif opts[:patterns]
+  abort("Argument error: You provided a pattern file without " <<
+        "specifying any coloring options.\nTry color_tree " <<
+        "--help for help.")
+end
+
+# if passed color other than one defined, return black
+black = "#000000"
+red = "#FF1300"
+yellow = "#FFD700"
+blue = "#5311FF"
+green = "#00FF2C"
+color2hex = Hash.new "[&!color=\"#{black}\"]"
+color2hex.merge!({
+                   "black" => "[&!color=\"#{black}\"]",
+                   "red" => "[&!color=\"#{red}\"]",
+                   "blue" => "[&!color=\"#{blue}\"]",
+                   "yellow" => "[&!color=\"#{yellow}\"]",
+                   "green" => "[&!color=\"#{green}\"]"
+                 })
+
+# get the color patterns
+if color_f
+  patterns = {}
+  File.open(color_f).each_line do |line|
+    pattern, color = line.chomp.split "\t"
+
+    if opts[:name_map] || opts[:color_taxa_names] || opts[:color_branches]
+      pattern = clean_name pattern
+    end
+
+    if hex? color
+      patterns[pattern] = "[&!color=\"#{color}\"]"
+    else
+      patterns[pattern] = color2hex[color]
+    end
+  end
+end
+
+treeio = Bio::FlatFile.open(Bio::Newick, newick)
+
+newick = treeio.next_entry
+tree = newick.tree
+
+# do this first cos everything after will use the "new" names
+if opts[:name_map]
+  name_map = parse_name_map opts[:name_map]
+
+  tree.collect_node! do |node|
+    unless node.name.nil?
+      # every name is cleaned no matter what
+      node.name = clean node.name
+
+      if name_map.has_key?(node.name)
+        node.name = name_map[node.name]
+      end
+    end
+
+    node
+  end
+end
+
+if opts[:color_taxa_names]
+  leaves = tree.leaves.map do |n|
+    name = clean_name n.name
+
+    if (color = add_color_to_leaf_branch(patterns, name, opts[:exact]))
+      name + color
+    else
+      name
+    end
+  end
+else
+  leaves = tree.leaves.map { |n| clean_name n.name }
+end
+
+if opts[:color_branches]
+  tree.collect_node! do |node|
+    color_nodes patterns, tree, node, opts[:exact]
+  end
+end
+
+if opts[:remove_bootstraps_below]
+  tree.collect_node! do |node|
+    if node.bootstrap && node.bootstrap < opts[:remove_bootstraps_below]
+      node.bootstrap_string = ""
+    end
+
+    node
+  end
+end
+
+
+
+tre_str = tree.newick(indent: false).gsub(/'/, '')
+
+fig = 'begin figtree;
+	set appearance.backgroundColorAttribute="Default";
+	set appearance.backgroundColour=#-1;
+	set appearance.branchColorAttribute="User selection";
+	set appearance.branchLineWidth=1.0;
+	set appearance.branchMinLineWidth=0.0;
+	set appearance.branchWidthAttribute="Fixed";
+	set appearance.foregroundColour=#-16777216;
+	set appearance.selectionColour=#-2144520576;
+	set branchLabels.colorAttribute="User selection";
+	set branchLabels.displayAttribute="Branch times";
+	set branchLabels.fontName="sansserif";
+	set branchLabels.fontSize=8;
+	set branchLabels.fontStyle=0;
+	set branchLabels.isShown=false;
+	set branchLabels.significantDigits=2;
+	set colour.scheme.label="label:InterpolatingContinuous{{false,false,0.0,0.0},#000000,#000000}";
+	set layout.expansion=0;
+	set layout.layoutType="RECTILINEAR";
+	set layout.zoom=0;
+	set legend.attribute=null;
+	set legend.fontSize=10.0;
+	set legend.isShown=false;
+	set legend.significantDigits=2;
+	set nodeBars.barWidth=4.0;
+	set nodeBars.displayAttribute=null;
+	set nodeBars.isShown=false;
+	set nodeLabels.colorAttribute="label";
+	set nodeLabels.displayAttribute="label";
+	set nodeLabels.fontName="sansserif";
+	set nodeLabels.fontSize=8;
+	set nodeLabels.fontStyle=0;
+	set nodeLabels.isShown=true;
+	set nodeLabels.significantDigits=2;
+	set nodeShape.colourAttribute=null;
+	set nodeShape.isShown=false;
+	set nodeShape.minSize=10.0;
+	set nodeShape.scaleType=Width;
+	set nodeShape.shapeType=Circle;
+	set nodeShape.size=4.0;
+	set nodeShape.sizeAttribute=null;
+	set polarLayout.alignTipLabels=false;
+	set polarLayout.angularRange=0;
+	set polarLayout.rootAngle=0;
+	set polarLayout.rootLength=100;
+	set polarLayout.showRoot=true;
+	set radialLayout.spread=0.0;
+	set rectilinearLayout.alignTipLabels=false;
+	set rectilinearLayout.curvature=0;
+	set rectilinearLayout.rootLength=100;
+	set scale.offsetAge=0.0;
+	set scale.rootAge=1.0;
+	set scale.scaleFactor=1.0;
+	set scale.scaleRoot=false;
+	set scaleAxis.automaticScale=true;
+	set scaleAxis.fontSize=8.0;
+	set scaleAxis.isShown=false;
+	set scaleAxis.lineWidth=1.0;
+	set scaleAxis.majorTicks=1.0;
+	set scaleAxis.origin=0.0;
+	set scaleAxis.reverseAxis=false;
+	set scaleAxis.showGrid=true;
+	set scaleBar.automaticScale=true;
+	set scaleBar.fontSize=10.0;
+	set scaleBar.isShown=true;
+	set scaleBar.lineWidth=1.0;
+	set scaleBar.scaleRange=0.0;
+	set tipLabels.colorAttribute="User selection";
+	set tipLabels.displayAttribute="Names";
+	set tipLabels.fontName="sansserif";
+	set tipLabels.fontSize=8;
+	set tipLabels.fontStyle=0;
+	set tipLabels.isShown=true;
+	set tipLabels.significantDigits=2;
+	set trees.order=true;
+	set trees.orderType="increasing";
+	set trees.rooting=false;
+	set trees.rootingType="User Selection";
+	set trees.transform=false;
+	set trees.transformType="cladogram";
+end;
+'
+
+nexus = "#NEXUS
+begin taxa;
+dimensions ntax=#{leaves.count};
+taxlabels
+#{leaves.join("\n")}
+;
+end;
+
+begin trees;
+  tree tree_1 = [&R] #{tre_str}
+end;
+
+#{fig}"
+
+puts nexus
