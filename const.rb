@@ -1,8 +1,8 @@
 module Const
   CLIBH = File.join File.dirname(__FILE__), "lib", "methods.h"
 
-  WINDOW_SIZE = 300
-  WINDOW_STEP = 25
+  WINDOW_SIZE = 100
+  WINDOW_STEP = 10
 
   OTU_CUTOFF = 0.03
 
@@ -18,9 +18,24 @@ module Const
 
   DATABASE = File.join ASSETS_FOLDER, "database.fa"
 
-  DE_DIST = File.join ASSETS_FOLDER, "database_DE_dist.txt"
-  DE_DIST_PERCENTILES =
-    File.join ASSETS_FOLDER, "database_DE_dist_percentiles.txt"
+  if WINDOW_SIZE == 300 && WINDOW_STEP == 25
+    DE_DIST = File.join ASSETS_FOLDER, "database_DE_dist.txt"
+    DE_DIST_PERCENTILES =
+      File.join ASSETS_FOLDER, "database_DE_dist_percentiles.txt"
+  elsif WINDOW_SIZE == 100 && WINDOW_STEP == 10
+    DE_DIST =
+      File.join ASSETS_FOLDER,
+                "10000_proteobacteria_window_100_step_10",
+                "10000.proteobacteria.de_dist.txt.gz"
+    DE_DIST_PERCENTILES =
+      File.join ASSETS_FOLDER,
+                "10000_proteobacteria_window_100_step_10",
+                "10000.proteobacteria.de_dist.percentiles.txt"
+  else
+    abort "[WINDOW_SIZE, WINDOW_STEP] must be either [300, 25], " +
+          "or [100, 10]; was [#{WINDOW_SIZE}, #{WINDOW_STEP}]"
+  end
+
 
   NUM_PERCENTILES = 10
 

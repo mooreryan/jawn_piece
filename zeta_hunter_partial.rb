@@ -199,7 +199,8 @@ Ryan.time_it("Check for chimeras") do
   Ryan.time_it("Run Zintail") do
     cmd = "ruby #{pintail} " +
           "--queries #{opts[:alignment]} " +
-          "--outdir #{opts[:outdir]}"
+          "--outdir #{opts[:outdir]} " +
+          "--mask"
     Ryan.run_it cmd
     # end
   end

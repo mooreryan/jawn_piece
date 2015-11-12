@@ -11,3 +11,4 @@ lib/de_dist
 lib/percentiles
 assets/database_DE_dist_percentiles.txt
 assets/database_DE_dist.txt
+assets/10000_proteobacteria_window_100_step_10/*.gz
