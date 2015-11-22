@@ -315,3 +315,30 @@ def get_DE_dist mask, threads
 
   de_values
 end
+
+# seqs is an array of Sequences
+def get_non_masked_DE_dist seqs, threads
+  windowed_avg_probs, database_overall_evol_dist =
+                      get_database_pintail_info seqs
+
+  de_values =
+    Parallel.map_with_index(seqs.combination(2),
+                            in_processes: threads) do |(query, subj), idx|
+    # seqs.combination(2).map.with_index do |(query, subj), idx|
+    # progress = (idx+1) / total * 100
+    # $stderr.printf "Progress: %.2f%%\r", progress
+
+    obs_perc_diffs =
+      CMethods.windowed_str_mismatch_wrapper(query, subj)
+    obs_evol_dist = mean_obs_perc_dist obs_perc_diffs
+
+    fitting_coefficient = obs_evol_dist / database_overall_evol_dist
+    exp_perc_diffs = windowed_avg_probs.map do |start, prob|
+      [start, fitting_coefficient * prob]
+    end
+
+    [obs_evol_dist,
+     CMethods.get_de_wrapper(obs_perc_diffs, exp_perc_diffs)]
+  end
+  de_values
+end
